@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+todoist_repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+todoist_preview_dir=$(mktemp -d /tmp/omatasks-preview.XXXXXX)
+trap 'rm -rf -- "$todoist_preview_dir"' EXIT
+ln -s "${OMARCHY_PATH:-/usr/share/omarchy}/shell/Commons" "$todoist_preview_dir/Commons"
+ln -s "${OMARCHY_PATH:-/usr/share/omarchy}/shell/Ui" "$todoist_preview_dir/Ui"
+ln -s "$todoist_repo" "$todoist_preview_dir/plugin"
+cp "$todoist_repo/tools/preview.qml" "$todoist_preview_dir/shell.qml"
+mkdir -p "$todoist_repo/screenshots"
+TODOIST_PREVIEW_DIR="$todoist_preview_dir" TODOIST_PREVIEW_OUT="$todoist_repo" \
+  QT_QPA_PLATFORM=offscreen QT_SCALE_FACTOR=2 timeout 20s quickshell -p "$todoist_preview_dir" --no-color

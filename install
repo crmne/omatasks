@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+todoist_source=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+todoist_target="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/plugins/crmne.todoist"
+omarchy plugin validate "$todoist_source"
+
+if [[ -e $todoist_target || -L $todoist_target ]]; then
+  todoist_backup="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy-todoist/backups/$(date +%Y%m%d-%H%M%S)"
+  mkdir -p "$todoist_backup"
+  cp -a "$todoist_target/." "$todoist_backup/"
+  if [[ -L $todoist_target ]]; then unlink "$todoist_target"; fi
+fi
+mkdir -p "$todoist_target"
+cp -r "$todoist_source/manifest.json" "$todoist_source/Model.js" \
+  "$todoist_source/Service.qml" "$todoist_source/BarWidget.qml" \
+  "$todoist_source/ShortcutManager.qml" "$todoist_source/ShortcutModel.js" \
+  "$todoist_source/QuickAdd.qml" "$todoist_source/ui" \
+  "$todoist_source/README.md" "$todoist_source/LICENSE" "$todoist_target/"
+omarchy-shell shell rescanPlugins
+omarchy plugin enable crmne.todoist --section right
+printf '%s\n' 'Installed. Click the Todoist bar icon to connect to Todoist.'

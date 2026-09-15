@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+todoist_repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+todoist_test_dir=$(mktemp -d /tmp/omarchy-todoist-drag.XXXXXX)
+trap 'rm -rf -- "$todoist_test_dir"' EXIT
+ln -s "${OMARCHY_PATH:-/usr/share/omarchy}/shell/Commons" "$todoist_test_dir/Commons"
+ln -s "${OMARCHY_PATH:-/usr/share/omarchy}/shell/Ui" "$todoist_test_dir/Ui"
+ln -s "$todoist_repo" "$todoist_test_dir/plugin"
+cp "$todoist_repo/tests/drag.qml" "$todoist_test_dir/shell.qml"
+TODOIST_TEST_DIR="$todoist_test_dir" QT_QPA_PLATFORM=offscreen timeout 30s \
+  quickshell -p "$todoist_test_dir" --no-color 2>&1 | tee "$todoist_test_dir/output.log"
+rg -q 'DRAG UI RESULTS [0-9]+ passed 0 failed' "$todoist_test_dir/output.log"

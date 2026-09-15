@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "crmne.todoist",
+  "name": "OmaTasks for Todoist",
+  "version": "1.0.0",
+  "author": "Carmine Paolino",
+  "license": "MIT",
+  "description": "Todoist in the Omarchy bar: Today, Inbox and Upcoming, rich Quick Add, task editing, grouping, and drag-to-reorder synced through the API.",
+  "kinds": [
+    "service",
+    "bar-widget",
+    "overlay"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml",
+    "barWidget": "BarWidget.qml",
+    "overlay": "QuickAdd.qml"
+  },
+  "barWidget": {
+    "displayName": "OmaTasks for Todoist",
+    "description": "Today, Inbox and Upcoming, with task details, grouping and quick add.",
+    "category": "Productivity",
+    "aliases": [
+      "todoist",
+      "tasks",
+      "omatasks"
+    ],
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
