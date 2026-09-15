@@ -21,7 +21,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y qt6-declarative-dev-tools
           find . -name '*.qml' -not -path './.git/*' -print0 | while IFS= read -r -d '' file; do
-            /usr/lib/qt6/bin/qmlformat --no-sort "$file" > /dev/null
+            /usr/lib/qt6/bin/qmlformat "$file" > /dev/null
           done
       - name: Check whitespace and shell scripts
         run: |

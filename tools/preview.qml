@@ -36,6 +36,9 @@ ShellRoot {
         visible: true
         implicitWidth: 1600; implicitHeight: 900
         color: "#100c0b"
+        Item {
+        id: artwork
+        anchors.fill: parent
         Canvas {
             anchors.fill: parent
             onPaint: {
@@ -97,6 +100,7 @@ ShellRoot {
                 taskLabels: ["next"]
             }
         }
+        }
     }
     TestCase { id: capture; when: false }
     Timer {
@@ -106,32 +110,30 @@ ShellRoot {
             phase++;
             var dir = Quickshell.env("TODOIST_PREVIEW_OUT");
             if (phase === 1) {
-                capture.grabImage(window.contentItem).save(dir + "/preview.png");
-                panel.grabToImage(function(result) { result.saveToFile(dir + "/screenshots/today.png"); }, Qt.size(912, 1240));
-                quickCard.visible = true;
+                artwork.grabToImage(function(result) { result.saveToFile(dir + "/preview.png"); });
+                panel.grabToImage(function(result) { result.saveToFile(dir + "/screenshots/today.png"); });
             }
-            if (phase === 2) {
-                quickCard.grabToImage(function(result) { result.saveToFile(dir + "/screenshots/quick-add.png"); }, Qt.size(920, quickCard.height * 2));
-                composer.openPicker("project");
-            }
-            if (phase === 3) {
-                quickCard.grabToImage(function(result) { result.saveToFile(dir + "/screenshots/quick-add-picker.png"); }, Qt.size(920, quickCard.height * 2));
+            if (phase === 2) quickCard.visible = true;
+            if (phase === 3) quickCard.grabToImage(function(result) { result.saveToFile(dir + "/screenshots/quick-add.png"); });
+            if (phase === 4) composer.openPicker("project");
+            if (phase === 5) quickCard.grabToImage(function(result) { result.saveToFile(dir + "/screenshots/quick-add-picker.png"); });
+            if (phase === 6) {
                 quickCard.visible = false;
                 taskList.showTask(service.tasks[0]);
             }
-            if (phase === 4) {
+            if (phase === 7) {
                 var popup = capture.findChild(taskList, "taskDetailsPopup");
-                popup.contentItem.parent.grabToImage(function(result) { result.saveToFile(dir + "/screenshots/task-details.png"); }, Qt.size(popup.width * 2, popup.height * 2));
+                popup.contentItem.parent.grabToImage(function(result) { result.saveToFile(dir + "/screenshots/task-details.png"); });
             }
-            if (phase === 5) {
+            if (phase === 8) {
                 capture.findChild(taskList, "taskDetailsPopup").close();
                 capture.findChild(taskList, "displayPopup").open();
             }
-            if (phase === 6) {
+            if (phase === 9) {
                 var menu = capture.findChild(taskList, "displayPopup");
-                menu.contentItem.parent.grabToImage(function(result) { result.saveToFile(dir + "/screenshots/display.png"); }, Qt.size(menu.width * 2, menu.height * 2));
+                menu.contentItem.parent.grabToImage(function(result) { result.saveToFile(dir + "/screenshots/display.png"); });
             }
-            if (phase === 7) Qt.quit();
+            if (phase === 10) Qt.quit();
         }
     }
 }
