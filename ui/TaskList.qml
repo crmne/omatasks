@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import qs.Commons
 import "../Model.js" as Model
 import "OrderModel.js" as Order
+import "BulkModel.js" as Bulk
 
 FocusScope {
     id: root
@@ -14,6 +15,7 @@ FocusScope {
     property string composerProject: ""
     property var heldRows: null
     property var selectedTask: null
+    property var selectedIds: []
     property var dragRows: null
     property int dragIndex: -1
     property int dropIndex: -1
@@ -25,7 +27,7 @@ FocusScope {
     readonly property var options: service.viewOptions(view)
     readonly property var rows: dragRows || heldRows || Model.viewRows(service.tasks, service.projects, service.collaborators, options, view, service.user.id, service.now)
     readonly property bool setupVisible: !service.configured || settingsOpen
-    readonly property real preferredHeight: Math.min(Style.space(service.panelHeight), setupVisible ? setup.implicitHeight + Style.space(68) : Math.max(display.opened || details.opened ? Style.space(440) : Style.space(110), list.contentHeight + header.height + status.height + Style.space(8)))
+    readonly property real preferredHeight: Math.min(Style.space(service.panelHeight), setupVisible ? setup.implicitHeight + Style.space(68) : Math.max(display.opened || details.opened || taskMenu.visible ? Style.space(440) : Style.space(110), list.contentHeight + header.height + status.height + selectionBar.height + Style.space(8)))
     signal closeRequested()
 
     function updateListModel() {
@@ -35,19 +37,38 @@ FocusScope {
         list.forceLayout();
         list.contentY = list.originY + Math.max(0, Math.min(offset, list.contentHeight - list.height));
     }
-    onRowsChanged: updateListModel()
+    onRowsChanged: {
+        updateListModel();
+        var visible = Bulk.visibleIds(rows);
+        selectedIds = selectedIds.filter(function(id) { return visible.indexOf(id) >= 0; });
+    }
     Component.onCompleted: updateListModel()
 
     function addAt(key, projectId) {
+        clearSelection();
         heldRows = rows;
         composerProject = projectId || "";
         composerKey = key;
         Qt.callLater(function() { var index = root.rows.findIndex(function(row) { return row.key === key; }); if (index >= 0) list.positionViewAtIndex(index, ListView.Contain); });
     }
-    function reset() { view = "today"; settingsOpen = false; display.close(); details.close(); }
-    function showTask(task) { selectedTask = task; details.open(); }
+    function clearSelection() { selectedIds = []; taskMenu.close(); }
+    function toggleSelection(task) {
+        if (dragging || service.saving) return;
+        selectedIds = Bulk.toggle(selectedIds, task.id);
+        forceActiveFocus();
+    }
+    function openTaskMenu(task, point) {
+        if (dragging || service.saving || composerKey) return;
+        if (selectedIds.indexOf(String(task.id)) < 0) selectedIds = [String(task.id)];
+        taskMenu.tasks = service.tasks.filter(function(t) { return root.selectedIds.indexOf(String(t.id)) >= 0; });
+        taskMenu.location = point;
+        display.close();
+        taskMenu.open();
+    }
+    function reset() { clearSelection(); view = "today"; settingsOpen = false; display.close(); details.close(); }
+    function showTask(task) { clearSelection(); selectedTask = task; details.open(); }
     function startDrag(index, point) {
-        if (service.saving || composerKey || setupVisible) return;
+        if (service.saving || composerKey || setupVisible || selectedIds.length) return;
         dragRows = rows;
         dragIndex = index;
         // ListView keeps its current delegate alive outside the cache while the
@@ -84,16 +105,19 @@ FocusScope {
         if (target) service.reorderTasks(view, String(source.task.id), String(target.task.id), after, source.groupKey);
         cancelDrag();
     }
-    Keys.onEscapePressed: { if (dragging) cancelDrag(); else if (display.opened) display.close(); else if (details.opened && detailLoader.item) detailLoader.item.dismissEditor(); else if (composerKey) composerKey = ""; else if (settingsOpen) settingsOpen = false; else closeRequested(); }
+    Keys.onEscapePressed: { if (dragging) cancelDrag(); else if (taskMenu.visible) { if (!taskMenu.busy) taskMenu.close(); } else if (display.opened) display.close(); else if (details.opened && detailLoader.item) detailLoader.item.dismissEditor(); else if (composerKey) composerKey = ""; else if (selectedIds.length) clearSelection(); else if (settingsOpen) settingsOpen = false; else closeRequested(); }
     Keys.onPressed: function(event) {
         if (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_Tab) {
             var tabs = ["today", "inbox", "upcoming"];
             if (!dragging) view = tabs[(tabs.indexOf(view) + (event.modifiers & Qt.ShiftModifier ? 2 : 1)) % 3]; event.accepted = true;
         }
+        if (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_A && !dragging && !composerKey && !details.visible && !display.visible && !taskMenu.visible && !setupVisible) {
+            selectedIds = Bulk.visibleIds(rows); event.accepted = true;
+        }
     }
-    onViewChanged: { cancelDrag(); composerKey = ""; list.positionViewAtBeginning(); }
-    onSetupVisibleChanged: if (setupVisible) cancelDrag()
-    onVisibleChanged: if (!visible) cancelDrag()
+    onViewChanged: { cancelDrag(); clearSelection(); composerKey = ""; list.positionViewAtBeginning(); }
+    onSetupVisibleChanged: if (setupVisible) { cancelDrag(); clearSelection(); }
+    onVisibleChanged: if (!visible) { cancelDrag(); clearSelection(); }
     onComposerKeyChanged: if (!composerKey) heldRows = null
 
     RowLayout {
@@ -129,6 +153,22 @@ FocusScope {
         wrapMode: Text.WordWrap; elide: Text.ElideNone
         font.pixelSize: Style.font.bodySmall
     }
+    RowLayout {
+        id: selectionBar
+        anchors.top: status.bottom
+        width: parent.width
+        height: visible ? Style.space(34) : 0
+        visible: root.selectedIds.length > 0 && !root.setupVisible
+        Label { Layout.fillWidth: true; text: root.selectedIds.length + " selected"; color: Color.accent; font.pixelSize: Style.font.bodySmall }
+        Action {
+            text: "Actions…"; objectName: "selectionActions"; enabled: !root.service.saving
+            onClicked: {
+                var task = root.service.tasks.find(function(t) { return String(t.id) === root.selectedIds[0]; });
+                if (task) root.openTaskMenu(task, mapToItem(root, 0, height));
+            }
+        }
+        Action { text: "Clear"; enabled: !root.service.saving; onClicked: root.clearSelection() }
+    }
     C.ScrollView {
         visible: root.setupVisible
         anchors.top: status.bottom; anchors.topMargin: Style.space(18)
@@ -141,7 +181,7 @@ FocusScope {
         id: list
         objectName: "taskListView"
         visible: !root.setupVisible
-        anchors.top: status.bottom; anchors.topMargin: Style.space(8)
+        anchors.top: selectionBar.bottom; anchors.topMargin: Style.space(8)
         anchors.bottom: parent.bottom
         width: parent.width
         clip: true
@@ -178,11 +218,14 @@ FocusScope {
                 id: taskComponent
                 TaskRow {
                     task: rowLoader.modelData.task; service: root.service; view: root.view; grouping: root.options.grouping
-                    reorderEnabled: !root.service.saving && !root.composerKey
+                    reorderEnabled: !root.service.saving && !root.composerKey && !root.selectedIds.length
+                    selected: root.selectedIds.indexOf(String(task.id)) >= 0
                     dragging: root.dragIndex === rowLoader.index
                     listDragging: root.dragging
                     opacity: dragging ? 0.3 : 1
                     onActivated: function(task) { root.showTask(task); }
+                    onSelectionToggled: function(task) { root.toggleSelection(task); }
+                    onContextRequested: function(task, x, y) { root.openTaskMenu(task, mapToItem(root, x, y)); }
                     onDragStarted: function(x, y) { root.startDrag(rowLoader.index, mapToItem(root, x, y)); }
                     onDragMoved: function(x, y) { root.moveDrag(mapToItem(root, x, y)); }
                     onDragEnded: root.finishDrag()
@@ -249,6 +292,12 @@ FocusScope {
             text: root.dragging ? Model.plain(root.rows[root.dragIndex].task.content) : ""
             maximumLineCount: 1
         }
+    }
+    TaskMenu {
+        id: taskMenu
+        service: root.service
+        onCompleted: root.clearSelection()
+        onEditRequested: function(task) { root.showTask(task); Qt.callLater(function() { if (detailLoader.item) detailLoader.item.startEditing(); }); }
     }
     C.Popup {
         id: display

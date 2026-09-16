@@ -4,6 +4,7 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import "Model.js" as Model
 import "ui/OrderModel.js" as Order
+import "ui/BulkModel.js" as Bulk
 
 Item {
     id: root
@@ -33,6 +34,7 @@ Item {
     property var completionIds: ({})
     property var reorderCache: ({})
     property var pendingReorder: null
+    property var bulkRetry: null
     property int generation: 0
     property real lastSync: 0
     property real retryAfter: 0
@@ -53,6 +55,7 @@ Item {
     signal taskCompleted(string taskId)
     signal connected()
     signal operationFailed(string message)
+    signal taskActionFinished()
 
     function registerWidget(widget) { if (widgets.indexOf(widget) < 0) widgets = widgets.concat([widget]); }
     function unregisterWidget(widget) { widgets = widgets.filter(function(w) { return w !== widget; }); }
@@ -101,6 +104,7 @@ Item {
         syncToken = "*"; loaded = false; error = ""; retryAfter = 0; lastSync = 0;
         completionIds = {};
         reorderCache = {};
+        bulkRetry = null;
         if (configured) refresh();
     }
     function connectToken(value) {
@@ -224,6 +228,51 @@ Item {
             if (!data.sync_token) refresh();
         });
         return true;
+    }
+    function applyTaskAction(ids, action, value) {
+        if (!configured || saving || connecting || Date.now() < retryAfter) return false;
+        var signature = JSON.stringify([ids.slice().sort(), action, value]);
+        if (bulkRetry && bulkRetry.signature === signature) return retryTaskAction();
+        var commands;
+        try { commands = Bulk.commands(tasks, ids, action, value, now); }
+        catch (e) { error = e.message; operationFailed(error); return false; }
+        if (!commands.length || !beginWrite()) return false;
+        bulkRetry = {signature: signature, commands: commands, saved: 0};
+        sendTaskActionBatch(bulkRetry);
+        return true;
+    }
+    function retryTaskAction() {
+        if (!bulkRetry || !beginWrite()) return false;
+        sendTaskActionBatch(bulkRetry);
+        return true;
+    }
+    function sendTaskActionBatch(job) {
+        var batch = job.commands.slice(0, 100);
+        request("POST", "/sync", {sync_token: syncToken, resource_types: ["items", "projects", "sections", "labels", "user", "collaborators", "reminders", "completed_info"], commands: batch}, token, function(data, message) {
+            var statuses = data && data.sync_status || {}, failed = [];
+            batch.forEach(function(command) {
+                if (message || statuses[command.uuid] !== "ok") failed.push(command);
+                else job.saved++;
+            });
+            job.commands = failed.concat(job.commands.slice(batch.length));
+            // Duplicated children may be sent in a later batch than their parent.
+            var mapping = data && data.temp_id_mapping || {};
+            job.commands.forEach(function(command) {
+                if (mapping[command.args.parent_id]) command.args.parent_id = mapping[command.args.parent_id];
+            });
+            if (data && data.sync_token) ingest(data);
+            else syncToken = "*";
+            if (failed.length) {
+                var result = statuses[failed[0].uuid];
+                saving = false;
+                error = (job.saved ? job.saved + " changes saved. " : "") + (message || (result && result.error) || "Todoist did not confirm the changes.") + " Retry to finish the remaining changes.";
+                operationFailed(error); return;
+            }
+            if (job.commands.length) { sendTaskActionBatch(job); return; }
+            bulkRetry = null; saving = false; error = "";
+            taskActionFinished();
+            if (!data || !data.sync_token) refresh();
+        });
     }
     function finishReorder(success) {
         var pending = pendingReorder;

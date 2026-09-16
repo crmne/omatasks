@@ -4,7 +4,7 @@ Your Todoist day in the Omarchy bar, with a native Quick Add a shortcut away.
 
 ![OmaTasks for Todoist: a compact task panel in the Omarchy bar](preview.png)
 
-**Today · Inbox · Upcoming · Quick Add · Edit · Drag to reorder**
+**Today · Inbox · Upcoming · Quick Add · Edit · Multi-select · Drag to reorder**
 
 A compact list that puts your tasks first. Open the bar panel to plan your day,
 complete a task, or change its details. Press **Alt+Space** to capture something
@@ -79,6 +79,8 @@ The layout follows the established editor shown in Todoist’s [Quick Add design
 
 - Click a task's circle to complete it. Todoist advances recurring tasks to their next occurrence.
 - Click a task for its full description, date/time, recurrence, duration, deadline, priority, labels, project/section, assignee, reminders, and subtask progress. Long text wraps, and only vertical scrolling is enabled.
+- **Ctrl-click** tasks to select or deselect them, then **right-click** a selected task (or choose **Actions…**) to act on the selection. **Ctrl+A** selects every task in the current filtered view; **Escape** or **Clear** clears the selection. Right-clicking an unselected task selects just that task. Selected tasks are highlighted, including appearances in multiple label groups.
+- The task menu supports completion, Today/Tomorrow/Weekend/Next Monday, custom dates and recurrence, removing dates, priorities, deadlines, adding reminders, moving to a project or section, duplication, copying task links, and deletion with confirmation. Quick date choices retain existing recurrence and time; custom date expressions replace the schedule. Duplication includes active subtasks and task properties, without comments or reminders. Parent/subtask selections are processed together for completion, moves, duplication, and deletion. Failed bulk actions offer **Retry remaining changes**, preserving confirmed changes and reusing request IDs for uncertain results.
 - Complete tasks and subtasks from the detail popup, or choose **Edit** to change the title, description, project/section, date/recurrence, priority, labels, assignee, deadline, duration, and reminders. **Save** writes the changes; **Cancel** discards the draft. Only changed fields are sent, preserving existing schedules when you edit other fields. Deadlines accept Today, Tomorrow, Next week, or YYYY-MM-DD.
 - The detail popup links to the parent task, individual subtasks, and comments in Todoist when present.
 - Drag a task up or down to reorder it. The insertion line shows where it will land; hold near the top or bottom to scroll. **Escape** or dropping outside cancels. A successful drop selects **Manual** sorting for that tab and saves the order through Todoist's API. Failed saves restore the previous order and show an error.
@@ -91,7 +93,9 @@ The layout follows the established editor shown in Todoist’s [Quick Add design
 - Middle-click the bar widget, or use **Display → Refresh**, to refresh immediately. Background sync runs every minute.
 
 <details>
-<summary>Task details and display options</summary>
+<summary>Task menu, details, and display options</summary>
+
+<img src="screenshots/multi-selection.png" alt="Two selected tasks with the bulk action context menu" width="456">
 
 <img src="screenshots/task-details.png" alt="Task details with completion, editing, date, duration, priority, and labels" width="560">
 
@@ -134,7 +138,7 @@ Implementation follows the [Todoist API v1 documentation](https://developer.todo
 
 `./tools/render-preview` regenerates the release artwork and screenshots from the real QML components with sample data. It never accesses your account.
 
-`check-drag` runs offscreen QML interaction tests using synthetic tasks and intercepted requests. It checks clicks, drops, scrolling, scroll-position retention, and cancellation, without accessing a Todoist account.
+`check-drag` runs offscreen QML interaction tests using synthetic tasks and intercepted requests. It checks clicks, multi-selection, context menus, bulk actions, deletion confirmation, drops, scrolling, scroll-position retention, and cancellation, without accessing a Todoist account. Bulk service tests cover batching, partial failures, retries, recurring completion, and account changes.
 
 Not created by, affiliated with, or supported by Todoist.
 

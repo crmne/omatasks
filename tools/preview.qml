@@ -102,6 +102,17 @@ ShellRoot {
         }
         }
     }
+    FloatingWindow {
+        id: selectionWindow
+        visible: false
+        implicitWidth: 456; implicitHeight: 620
+        color: Color.popups.background
+        Rectangle {
+            id: selectionCanvas
+            anchors.fill: parent; color: Color.popups.background
+            Tasks.TaskList { id: selectionList; anchors.fill: parent; anchors.margins: 18; service: service }
+        }
+    }
     TestCase { id: capture; when: false }
     Timer {
         interval: 400; running: true; repeat: true
@@ -133,7 +144,20 @@ ShellRoot {
                 var menu = capture.findChild(taskList, "displayPopup");
                 menu.contentItem.parent.grabToImage(function(result) { result.saveToFile(dir + "/screenshots/display.png"); });
             }
-            if (phase === 10) Qt.quit();
+            if (phase === 10) {
+                capture.findChild(taskList, "displayPopup").close();
+                selectionWindow.visible = true;
+            }
+            if (phase === 11) {
+                selectionList.selectedIds = ["1", "2"];
+                selectionList.openTaskMenu(service.tasks[0], Qt.point(85, 80));
+            }
+            if (phase === 12) {
+                // Include the popup in this sample canvas for a full-resolution capture.
+                capture.findChild(selectionList, "taskContextMenu").contentItem.parent.parent = selectionCanvas;
+            }
+            if (phase === 13) selectionCanvas.grabToImage(function(result) { result.saveToFile(dir + "/screenshots/multi-selection.png"); });
+            if (phase === 14) Qt.quit();
         }
     }
 }

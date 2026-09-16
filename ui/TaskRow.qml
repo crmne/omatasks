@@ -11,7 +11,10 @@ Item {
     property bool reorderEnabled: false
     property bool dragging: false
     property bool listDragging: false
+    property bool selected: false
     signal activated(var task)
+    signal selectionToggled(var task)
+    signal contextRequested(var task, real x, real y)
     signal dragStarted(real x, real y)
     signal dragMoved(real x, real y)
     signal dragEnded()
@@ -38,20 +41,23 @@ Item {
     }
     implicitHeight: content.implicitHeight + Style.space(18)
 
-    Rectangle { anchors.fill: parent; color: Style.hoverFillFor(Color.popups.text, Color.accent); visible: hover.hovered; opacity: 0.5; radius: Style.cornerRadius }
+    Rectangle { anchors.fill: parent; color: root.selected ? Style.selectedFillFor(Color.popups.text, Color.accent) : Style.hoverFillFor(Color.popups.text, Color.accent); visible: root.selected || hover.hovered; opacity: root.selected ? 1 : 0.5; radius: Style.cornerRadius }
+    Rectangle { anchors.left: parent.left; anchors.top: parent.top; anchors.bottom: parent.bottom; width: Style.space(2); color: Color.accent; visible: root.selected }
     HoverHandler { id: hover }
     MouseArea {
         id: pointer
         objectName: "taskPointer_" + root.task.id
         anchors.fill: parent
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
         preventStealing: root.reorderEnabled
         cursorShape: root.listDragging ? Qt.ClosedHandCursor : Qt.PointingHandCursor
         property real pressX: 0
         property real pressY: 0
         property bool moved: false
-        onPressed: function(mouse) { pressX = mouse.x; pressY = mouse.y; moved = false; }
+        property bool canDrag: false
+        onPressed: function(mouse) { pressX = mouse.x; pressY = mouse.y; moved = false; canDrag = mouse.button === Qt.LeftButton && !(mouse.modifiers & Qt.ControlModifier); }
         onPositionChanged: function(mouse) {
-            if (!pressed || !root.reorderEnabled) return;
+            if (!pressed || !canDrag || !root.reorderEnabled) return;
             if (!moved && Math.hypot(mouse.x - pressX, mouse.y - pressY) >= Qt.styleHints.startDragDistance) {
                 moved = true; root.dragStarted(mouse.x, mouse.y);
             }
@@ -59,13 +65,28 @@ Item {
         }
         onReleased: { if (moved) root.dragEnded(); }
         onCanceled: { if (moved) root.dragCancelled(); }
-        onClicked: { if (!moved) root.activated(root.task); }
+        onClicked: function(mouse) {
+            if (moved) return;
+            if (mouse.button === Qt.RightButton) root.contextRequested(root.task, mouse.x, mouse.y);
+            else if (mouse.modifiers & Qt.ControlModifier) root.selectionToggled(root.task);
+            else root.activated(root.task);
+        }
     }
     TaskCheck {
         x: 0; y: Style.space(5)
         task: root.task
         enabled: !root.service.saving && !root.listDragging
         onClicked: root.service.completeTask(root.task)
+    }
+    MouseArea {
+        // Modified clicks on the completion circle select instead of completing.
+        x: 0; y: Style.space(5); width: Style.space(26); height: Style.space(28)
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onPressed: function(mouse) { if (mouse.button === Qt.LeftButton && !(mouse.modifiers & Qt.ControlModifier)) mouse.accepted = false; }
+        onClicked: function(mouse) {
+            if (mouse.button === Qt.RightButton) root.contextRequested(root.task, x + mouse.x, y + mouse.y);
+            else root.selectionToggled(root.task);
+        }
     }
     Column {
         id: content
@@ -113,5 +134,5 @@ Item {
         }
     }
     Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Color.popups.text; opacity: 0.09 }
-    Tip { visible: hover.hovered && !root.listDragging; text: root.projectText + (root.task.description ? "\n" + Model.plain(root.task.description) : ""); delay: 1200 }
+    Tip { visible: hover.hovered && !root.listDragging && !root.selected; text: root.projectText + (root.task.description ? "\n" + Model.plain(root.task.description) : ""); delay: 1200 }
 }

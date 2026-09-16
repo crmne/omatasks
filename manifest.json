@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "id": "crmne.todoist",
   "name": "OmaTasks for Todoist",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "Carmine Paolino",
   "license": "MIT",
-  "description": "Todoist in the Omarchy bar: Today, Inbox and Upcoming, rich Quick Add, task editing, grouping, and drag-to-reorder synced through the API.",
+  "description": "Todoist in the Omarchy bar: Today, Inbox and Upcoming, rich Quick Add, task editing, multi-selection, bulk actions, and drag-to-reorder synced through the API.",
   "kinds": [
     "service",
     "bar-widget",

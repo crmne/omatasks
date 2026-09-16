@@ -23,8 +23,13 @@ function service() {
     vm.runInContext(fs.readFileSync('ui/Fractional.js', 'utf8'), Fractional);
     const Order = vm.createContext({ Model, Fractional });
     vm.runInContext(fs.readFileSync('ui/OrderModel.js', 'utf8').replace(/^\.import.*$/gm, ''), Order);
+    const Edit = vm.createContext({ Date });
+    vm.runInContext(fs.readFileSync('ui/EditModel.js', 'utf8'), Edit);
+    const Bulk = vm.createContext({ Model, Edit, Date });
+    vm.runInContext(fs.readFileSync('ui/BulkModel.js', 'utf8').replace(/^\.import.*$/gm, ''), Bulk);
     const ctx = vm.createContext({ Order, preferences: {}, now: new Date(2026, 8, 15, 12), pendingReorder: null, reorderCache: {}, settingsFile: { setText() {} }, Model, XMLHttpRequest: XHR, Date, requests: [], completionIds: {}, generation: 0, token: 'test-token', configured: true, loading: false, saving: false, connecting: false, storageReady: true, error: '', retryAfter: 0, syncToken: '*', tasks: [], projects: [], sections: [], labels: [], collaborators: [], reminders: [], completedInfo: [], user: {}, lastSync: 0, taskAdded() { ctx.added = true; }, taskUpdated(id) { ctx.updated = id; }, taskCompleted(id) { ctx.completed = id; }, operationFailed(message) { ctx.failed = message; } });
     ctx.root = ctx;
+    ctx.Bulk = Bulk; ctx.bulkRetry = null; ctx.taskActionFinished = () => { ctx.bulkFinished = true; };
     const source = fs.readFileSync('Service.qml', 'utf8');
     const functions = [...source.matchAll(/^    function .+?\{[\s\S]*?^    \}/gm)].map(m => m[0]).join('\n');
     vm.runInContext(functions, ctx);
@@ -201,4 +206,68 @@ test('An uncertain task edit can retry the same command UUID without reporting f
     assert.equal(JSON.parse(new URLSearchParams(wires[1].body).get('commands'))[0].uuid, 'stable');
     wires[1].respond(200, {sync_token: 'next'});
     assert.equal(s.updated, undefined); assert.match(s.failed, /did not confirm/);
+});
+test('Bulk writes cancel stale syncs, deduplicate tasks and ingest confirmed changes', () => {
+    const {s, wires} = reorderFixture();
+    s.refresh();
+    assert.equal(s.applyTaskAction(['a', 'b', 'a'], 'priority', 4), true);
+    assert.equal(wires[0].aborted, true);
+    const commands = commandsOf(wires[1]);
+    assert.deepEqual(commands.map(c => c.args), [{id: 'a', priority: 4}, {id: 'b', priority: 4}]);
+    wires[1].respond(200, {sync_token: 'bulk', sync_status: Object.fromEntries(commands.map(c => [c.uuid, 'ok'])), items: [{...s.tasks[0], priority: 4}, {...s.tasks[1], priority: 4}]});
+    assert.equal(s.tasks[0].priority, 4); assert.equal(s.tasks[2].priority, 1);
+    assert.equal(s.saving, false); assert.equal(s.bulkFinished, true); assert.equal(s.bulkRetry, null);
+});
+test('A partial bulk failure retries only unconfirmed commands with their original UUIDs', () => {
+    const {s, wires} = reorderFixture();
+    s.applyTaskAction(['a', 'b', 'c'], 'duplicate', null);
+    const first = commandsOf(wires[0]);
+    wires[0].respond(200, {sync_token: 'partial', sync_status: {[first[0].uuid]: 'ok', [first[1].uuid]: {error: 'Project unavailable'}}});
+    assert.equal(s.bulkFinished, undefined); assert.match(s.error, /1 changes saved.*Project unavailable/);
+    assert.equal(s.bulkRetry.commands.length, 2);
+    assert.equal(s.applyTaskAction(['c', 'b', 'a'], 'duplicate', null), true);
+    assert.deepEqual(commandsOf(wires[1]), first.slice(1));
+    wires[1].respond(200, {sync_token: 'done', sync_status: Object.fromEntries(first.slice(1).map(c => [c.uuid, 'ok']))});
+    assert.equal(s.bulkFinished, true); assert.equal(s.bulkRetry, null);
+});
+test('Bulk batches stop on a transport error and retain later tasks for an explicit retry', () => {
+    const {s, wires} = reorderFixture();
+    s.tasks = Array.from({length: 205}, (_, i) => ({id: String(i), content: 'Task ' + i}));
+    s.applyTaskAction(s.tasks.map(t => t.id), 'priority', 3);
+    const first = commandsOf(wires[0]); assert.equal(first.length, 100);
+    wires[0].respond(200, {sync_token: 'first', sync_status: Object.fromEntries(first.map(c => [c.uuid, 'ok']))});
+    const second = commandsOf(wires[1]); assert.equal(second.length, 100);
+    assert.equal(new URLSearchParams(wires[1].body).get('sync_token'), 'first');
+    wires[1].respond(503, {});
+    assert.equal(s.saving, false); assert.equal(s.bulkRetry.commands.length, 105); assert.equal(s.syncToken, '*');
+    assert.equal(s.retryTaskAction(), true);
+    assert.deepEqual(commandsOf(wires[2]), second);
+    wires[2].respond(200, {sync_token: 'second', sync_status: Object.fromEntries(second.map(c => [c.uuid, 'ok']))});
+    const last = commandsOf(wires[3]); assert.equal(last.length, 5);
+    wires[3].respond(200, {sync_token: 'last', sync_status: Object.fromEntries(last.map(c => [c.uuid, 'ok']))});
+    assert.equal(s.bulkFinished, true); assert.equal(s.saving, false);
+});
+test('Duplicate subtask parents are resolved across batch boundaries', () => {
+    const {s, wires} = reorderFixture();
+    s.tasks = Array.from({length: 101}, (_, i) => ({id: String(i), content: 'Task ' + i, project_id: 'inbox', parent_id: i ? String(i - 1) : null}));
+    s.applyTaskAction(['0'], 'duplicate', null);
+    const first = commandsOf(wires[0]);
+    wires[0].respond(200, {sync_token: 'first', sync_status: Object.fromEntries(first.map(c => [c.uuid, 'ok'])), temp_id_mapping: {[first[99].temp_id]: 'new-parent'}});
+    assert.equal(commandsOf(wires[1])[0].args.parent_id, 'new-parent');
+});
+test('Bulk recurring completions use close and trust the new occurrence returned by sync', () => {
+    const {s, wires} = reorderFixture();
+    s.tasks[0].due.is_recurring = true;
+    s.applyTaskAction(['a'], 'complete', null);
+    const command = commandsOf(wires[0])[0]; assert.equal(command.type, 'item_close');
+    wires[0].respond(200, {sync_token: 'next', sync_status: {[command.uuid]: 'ok'}, items: [{...s.tasks[0], due: {date: '2026-09-16', is_recurring: true}}]});
+    assert.equal(s.tasks[0].due.date, '2026-09-16'); assert.equal(s.bulkFinished, true);
+});
+test('Account changes discard bulk retries and ignore a previous account’s in-flight batch', () => {
+    const {s, wires} = reorderFixture();
+    s.applyTaskAction(['a', 'b'], 'delete', null);
+    const commands = commandsOf(wires[0]);
+    s.applyToken('new-account');
+    wires[0].respond(200, {sync_token: 'old', sync_status: Object.fromEntries(commands.map(c => [c.uuid, 'ok'])), items: [{id: 'old-task'}]});
+    assert.equal(s.tasks.length, 0); assert.equal(s.bulkRetry, null); assert.equal(s.bulkFinished, undefined);
 });
