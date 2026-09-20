@@ -27,7 +27,7 @@ function service() {
     vm.runInContext(fs.readFileSync('ui/EditModel.js', 'utf8'), Edit);
     const Bulk = vm.createContext({ Model, Edit, Date });
     vm.runInContext(fs.readFileSync('ui/BulkModel.js', 'utf8').replace(/^\.import.*$/gm, ''), Bulk);
-    const ctx = vm.createContext({ Order, preferences: {}, now: new Date(2026, 8, 15, 12), pendingReorder: null, reorderCache: {}, settingsFile: { setText() {} }, Model, XMLHttpRequest: XHR, Date, requests: [], completionIds: {}, generation: 0, token: 'test-token', configured: true, loading: false, saving: false, connecting: false, storageReady: true, error: '', retryAfter: 0, syncToken: '*', tasks: [], projects: [], sections: [], labels: [], collaborators: [], reminders: [], completedInfo: [], user: {}, lastSync: 0, taskAdded() { ctx.added = true; }, taskUpdated(id) { ctx.updated = id; }, taskCompleted(id) { ctx.completed = id; }, operationFailed(message) { ctx.failed = message; } });
+    const ctx = vm.createContext({ Order, preferences: {}, now: new Date(2026, 8, 15, 12), pendingReorder: null, reorderCache: {}, settingsFile: { setText() {} }, Model, XMLHttpRequest: XHR, Date, requests: [], completionIds: {}, generation: 0, token: 'test-token', configured: true, loading: false, saving: false, connecting: false, storageReady: true, error: '', retryAfter: 0, nextSyncRetry: 0, syncFailures: 0, syncToken: '*', tasks: [], projects: [], sections: [], labels: [], collaborators: [], reminders: [], completedInfo: [], user: {}, lastSync: 0, taskAdded() { ctx.added = true; }, taskUpdated(id) { ctx.updated = id; }, taskCompleted(id) { ctx.completed = id; }, operationFailed(message) { ctx.failed = message; } });
     ctx.root = ctx;
     ctx.Bulk = Bulk; ctx.bulkRetry = null; ctx.taskActionFinished = () => { ctx.bulkFinished = true; };
     const source = fs.readFileSync('Service.qml', 'utf8');
@@ -160,7 +160,7 @@ test('Rate limits back off; timeouts release loading state', () => {
     s.refresh(); wires[0].respond(429, {}, { 'Retry-After': '120' });
     s.refresh(); assert.equal(wires.length, 1);
     s.retryAfter = 0;
-    s.refresh(); s.requests[0].timeout();
+    s.refresh(true); s.requests[0].timeout();
     assert.equal(s.loading, false);
     assert.ok(s.error.includes('connection'));
 });
@@ -270,4 +270,57 @@ test('Account changes discard bulk retries and ignore a previous account’s in-
     s.applyToken('new-account');
     wires[0].respond(200, {sync_token: 'old', sync_status: Object.fromEntries(commands.map(c => [c.uuid, 'ok'])), items: [{id: 'old-task'}]});
     assert.equal(s.tasks.length, 0); assert.equal(s.bulkRetry, null); assert.equal(s.bulkFinished, undefined);
+});
+
+test('Transient sync failures back off to five minutes, preserve tasks and recover with the same token', () => {
+    const {s, wires} = service();
+    let now = Date.now();
+    s.Date = class extends Date { static now() { return now; } };
+    s.tasks = [{id: 'cached'}]; s.syncToken = 'incremental';
+    for (const delay of [5000, 10000, 20000, 40000, 80000, 160000, 300000, 300000]) {
+        s.refresh();
+        wires.at(-1).respond(503, {});
+        assert.equal(s.nextSyncRetry, now + delay);
+        assert.equal(s.tasks[0].id, 'cached');
+        assert.equal(s.token, 'test-token');
+        assert.match(s.error, /Retrying automatically/);
+        const count = wires.length;
+        now += delay - 1; s.refresh(); assert.equal(wires.length, count);
+        now++;
+    }
+    s.refresh();
+    assert.equal(new URLSearchParams(wires.at(-1).body).get('sync_token'), 'incremental');
+    wires.at(-1).respond(200, {sync_token: 'recovered'});
+    assert.equal(s.error, ''); assert.equal(s.syncFailures, 0); assert.equal(s.nextSyncRetry, 0);
+});
+
+test('Manual retry bypasses sync backoff, but respects server rate limits', () => {
+    const {s, wires} = service();
+    s.refresh(); wires[0].respond(0, '');
+    s.refresh(true); assert.equal(wires.length, 2);
+    wires[1].respond(429, {}, {'Retry-After': '120'});
+    assert.equal(s.nextSyncRetry, s.retryAfter);
+    s.refresh(true); assert.equal(wires.length, 2);
+});
+
+test('Timeout retries ignore late responses and account changes discard scheduled retries', () => {
+    const {s, wires} = service();
+    s.refresh(); s.requests[0].timeout();
+    const scheduled = s.nextSyncRetry;
+    assert.ok(scheduled > Date.now());
+    wires[0].respond(200, {sync_token: 'late', items: [{id: 'late'}]});
+    assert.equal(s.syncToken, '*'); assert.equal(s.nextSyncRetry, scheduled);
+    s.applyToken('replacement');
+    assert.equal(s.nextSyncRetry, 0); assert.equal(s.syncFailures, 0);
+    assert.equal(wires[1].headers.Authorization, 'Bearer replacement');
+});
+
+test('Authorization failures do not schedule transient retries; malformed sync responses do', () => {
+    const {s, wires} = service();
+    s.refresh(); wires[0].respond(401, {});
+    assert.equal(s.nextSyncRetry, 0); assert.doesNotMatch(s.error, /Retrying automatically/);
+    s.refresh(true); wires[1].respond(200, 'not json');
+    assert.ok(s.nextSyncRetry > Date.now());
+    s.refresh(true); wires[2].respond(200, {});
+    assert.equal(s.syncFailures, 2);
 });

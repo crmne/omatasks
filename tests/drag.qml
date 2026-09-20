@@ -15,7 +15,8 @@ ShellRoot {
         property var completions: []
         property bool failNext: false
         function applyToken(value) {}
-        function refresh() {}
+        property bool manualRefresh: false
+        function refresh(manual) { manualRefresh = manual === true; }
         function completeTask(task) { completions = completions.concat([String(task.id)]); }
         function request(method, path, body, credential, callback, requestId) {
             if (path !== "/sync" || !body.commands) throw new Error("Unexpected request");
@@ -48,6 +49,19 @@ ShellRoot {
             service.captured = []; service.completions = []; service.failNext = false; taskList.reset(); taskList.anchors.bottomMargin = 18;
             var list = findChild(taskList, "taskListView"); list.positionViewAtBeginning();
             wait(150);
+        }
+        function test_sync_retry_button() {
+            service.error = "Could not reach Todoist. Retrying automatically.";
+            service.manualRefresh = false;
+            var button = findChild(taskList, "retrySync");
+            tryCompare(button, "visible", true);
+            wait(100);
+            mouseClick(button);
+            compare(service.manualRefresh, true, "Retry button requests an immediate sync");
+            service.loading = true;
+            compare(button.enabled, false); compare(button.text, "Retrying…");
+            service.loading = false; service.error = "";
+            tryCompare(button, "visible", false);
         }
         function test_drag_saves_order() {
             var source = findChild(taskList, "taskPointer_2"), target = findChild(taskList, "taskPointer_0");

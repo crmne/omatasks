@@ -142,16 +142,28 @@ FocusScope {
         Action { id: displayButton; objectName: "displayButton"; iconName: "display"; iconSize: Style.space(17); tip: "Display"; selected: display.opened; enabled: root.service.configured; onClicked: display.opened ? display.close() : display.open() }
         Action { iconName: "settings"; iconSize: Style.space(17); tip: "Settings"; selected: root.settingsOpen; onClicked: root.settingsOpen = !root.settingsOpen }
     }
-    Label {
+    ColumnLayout {
         id: status
         anchors.top: header.bottom; anchors.topMargin: visible ? Style.space(10) : 0
         width: parent.width
-        height: text !== "" ? contentHeight + Style.space(8) : 0
-        visible: text !== ""
-        text: root.service.error || (!root.service.loaded && root.service.configured ? "Loading tasks…" : "")
-        color: root.service.error ? Color.urgent : Color.popups.text
-        wrapMode: Text.WordWrap; elide: Text.ElideNone
-        font.pixelSize: Style.font.bodySmall
+        height: visible ? implicitHeight + Style.space(8) : 0
+        visible: statusText.text !== ""
+        spacing: Style.space(4)
+        Label {
+            id: statusText
+            Layout.fillWidth: true
+            text: root.service.error || (!root.service.loaded && root.service.configured ? "Loading tasks…" : "")
+            color: root.service.error ? Color.urgent : Color.popups.text
+            wrapMode: Text.WordWrap; elide: Text.ElideNone
+            font.pixelSize: Style.font.bodySmall
+        }
+        Action {
+            objectName: "retrySync"
+            visible: root.service.configured && root.service.error !== ""
+            text: root.service.loading ? "Retrying…" : "Retry now"
+            enabled: !root.service.loading && !root.service.saving && !root.service.connecting
+            onClicked: root.service.refresh(true)
+        }
     }
     RowLayout {
         id: selectionBar

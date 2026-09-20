@@ -38,6 +38,8 @@ Item {
     property int generation: 0
     property real lastSync: 0
     property real retryAfter: 0
+    property real nextSyncRetry: 0
+    property int syncFailures: 0
     property date now: clock.date
     property var widgets: []
     readonly property bool configured: token.length > 0
@@ -91,6 +93,7 @@ Item {
         if (storageReady) settingsFile.setText(JSON.stringify(preferences));
     }
     function cancelRequests() {
+        nextSyncRetry = 0;
         generation++;
         var old = requests; requests = [];
         old.forEach(function(r) { r.xhr.abort(); });
@@ -102,6 +105,7 @@ Item {
         token = String(value || "").trim();
         tasks = []; projects = []; sections = []; labels = []; collaborators = []; reminders = []; completedInfo = []; user = {};
         syncToken = "*"; loaded = false; error = ""; retryAfter = 0; lastSync = 0;
+        syncFailures = 0;
         completionIds = {};
         reorderCache = {};
         bulkRetry = null;
@@ -127,22 +131,22 @@ Item {
     function request(method, path, body, credential, callback, requestId) {
         var xhr = new XMLHttpRequest(), epoch = generation;
         var entry = {xhr: xhr, started: Date.now(), done: false};
-        function finish(data, message) {
+        function finish(data, message, status) {
             if (entry.done) return;
             entry.done = true;
             requests = requests.filter(function(r) { return r !== entry; });
-            if (epoch === generation) callback(data, message);
+            if (epoch === generation) callback(data, message, status);
         }
-        entry.timeout = function() { finish(null, Model.errorMessage(0)); xhr.abort(); };
+        entry.timeout = function() { finish(null, Model.errorMessage(0), 0); xhr.abort(); };
         requests = requests.concat([entry]);
         xhr.onreadystatechange = function() {
             if (xhr.readyState !== XMLHttpRequest.DONE || epoch !== generation) return;
             if (xhr.status < 200 || xhr.status >= 300) {
                 if (xhr.status === 429) root.retryAfter = Date.now() + Math.max(60, Number(xhr.getResponseHeader("Retry-After")) || 60) * 1000;
-                finish(null, Model.errorMessage(xhr.status)); return;
+                finish(null, Model.errorMessage(xhr.status), xhr.status); return;
             }
             try { var data = xhr.responseText ? JSON.parse(xhr.responseText) : {}; }
-            catch (e) { finish(null, "Todoist returned an unreadable response. Try refreshing."); return; }
+            catch (e) { finish(null, "Todoist returned an unreadable response. Try refreshing.", 502); return; }
             finish(data, "");
         };
         xhr.open(method, Model.API_BASE + path);
@@ -171,14 +175,26 @@ Item {
         syncToken = data.sync_token || "*";
         loaded = true; lastSync = Date.now();
     }
-    function refresh() {
-        if (!configured || loading || saving || Date.now() < retryAfter) return;
+    function scheduleSyncRetry(message) {
+        syncFailures = Math.min(syncFailures + 1, 7);
+        var delay = Math.min(300000, 5000 * Math.pow(2, syncFailures - 1));
+        nextSyncRetry = Math.max(Date.now() + delay, retryAfter);
+        error = message + " Retrying automatically.";
+    }
+    function refresh(manual) {
+        if (!configured || loading || saving || connecting || Date.now() < retryAfter) return;
+        if (manual !== true && Date.now() < nextSyncRetry) return;
+        nextSyncRetry = 0;
         loading = true;
-        request("POST", "/sync", {sync_token: syncToken, resource_types: ["items", "projects", "sections", "labels", "user", "collaborators", "reminders", "completed_info"]}, token, function(data, message) {
+        request("POST", "/sync", {sync_token: syncToken, resource_types: ["items", "projects", "sections", "labels", "user", "collaborators", "reminders", "completed_info"]}, token, function(data, message, status) {
             loading = false;
-            if (message) { error = message; return; }
-            if (!data || !data.sync_token) { error = "Todoist returned an incomplete sync response. Try refreshing."; return; }
-            ingest(data); error = "";
+            if (message) {
+                if (status === 0 || status === 408 || status === 429 || status >= 500) scheduleSyncRetry(message);
+                else error = message;
+                return;
+            }
+            if (!data || !data.sync_token) { scheduleSyncRetry("Todoist returned an incomplete sync response."); return; }
+            ingest(data); error = ""; syncFailures = 0;
         });
     }
     function beginWrite() {
@@ -375,6 +391,10 @@ Item {
     }
     SystemClock { id: clock; precision: SystemClock.Minutes; onDateChanged: root.refresh() }
     Timer { interval: 60000; running: root.configured; repeat: true; onTriggered: root.refresh() }
+    Timer {
+        interval: 1000; running: root.configured && root.nextSyncRetry > 0; repeat: true
+        onTriggered: { if (Date.now() >= root.nextSyncRetry) root.refresh(); }
+    }
     Timer {
         interval: 1000; running: root.requests.length > 0; repeat: true
         onTriggered: root.requests.slice().forEach(function(r) { if (Date.now() - r.started > 20000) r.timeout(); })

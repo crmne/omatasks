@@ -40,6 +40,6 @@ ColumnLayout {
     RowLayout {
         Action { text: "Reset view"; onClicked: root.service.resetView(root.view) }
         Item { Layout.fillWidth: true }
-        Action { text: root.service.loading ? "Refreshing…" : "Refresh"; enabled: !root.service.loading; onClicked: root.service.refresh() }
+        Action { text: root.service.loading ? "Refreshing…" : "Refresh"; enabled: !root.service.loading; onClicked: root.service.refresh(true) }
     }
 }
