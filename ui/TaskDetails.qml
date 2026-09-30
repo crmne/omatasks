@@ -47,6 +47,7 @@ Item {
         clip: true
         contentWidth: availableWidth
         C.ScrollBar.horizontal.policy: C.ScrollBar.AlwaysOff
+        ScrollHandler { flickable: scroll.contentItem }
         ColumnLayout {
             id: body
             width: scroll.availableWidth

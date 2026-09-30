@@ -41,10 +41,12 @@ Item {
             border.color: Color.popups.border; border.width: 1; radius: Style.cornerRadius
             MouseArea { anchors.fill: parent }
             C.ScrollView {
+                id: composerScroll
                 anchors.fill: parent
                 anchors.margins: Style.space(18)
                 contentWidth: availableWidth
                 clip: true
+                Tasks.ScrollHandler { flickable: composerScroll.contentItem }
                 Tasks.Composer {
                     id: composer
                     width: parent.width
