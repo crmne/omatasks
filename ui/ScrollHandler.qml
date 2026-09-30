@@ -9,7 +9,7 @@ WheelHandler {
     property real targetY: NaN
     onWheel: function(event) {
         // Wayland touchpads provide small pixel deltas; mouse wheels use angles.
-        var delta = event.pixelDelta.x || event.pixelDelta.y ? event.pixelDelta.y * 3 : event.angleDelta.y / 120 * Qt.styleHints.wheelScrollLines * 24;
+        var delta = event.pixelDelta.x || event.pixelDelta.y ? event.pixelDelta.y * 12 : event.angleDelta.y / 120 * Qt.styleHints.wheelScrollLines * 24;
         if (!delta) return;
         // Accumulate input ahead of the animation; reverse direction immediately.
         if (!flickable.flickingVertically || !isFinite(targetY) || (targetY - flickable.contentY) * delta > 0) targetY = flickable.contentY;
@@ -24,4 +24,7 @@ WheelHandler {
         function onMovementEnded() { root.targetY = NaN; }
         function onDraggingChanged() { root.targetY = NaN; }
     }
+    // Use wheel-like timing and allow fast gestures to reach their destination.
+    property Binding scrollDeceleration: Binding { target: root.flickable; property: "flickDeceleration"; value: 15000; when: root.enabled }
+    property Binding scrollVelocity: Binding { target: root.flickable; property: "maximumFlickVelocity"; value: 10000; when: root.enabled }
 }

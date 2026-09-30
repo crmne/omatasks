@@ -6,8 +6,10 @@ const vm = require('node:vm');
 
 const source = fs.readFileSync('ui/ScrollHandler.qml', 'utf8');
 const handler = source.match(/onWheel: function\(event\) \{([\s\S]*?)^    \}/m)[1];
+const deceleration = Number(source.match(/property Binding scrollDeceleration:.*value: (\d+)/)[1]);
+const maximumVelocity = Number(source.match(/property Binding scrollVelocity:.*value: (\d+)/)[1]);
 function fixture(position = 100, origin = 0, contentHeight = 1000, height = 200, lines = 3) {
-    const flickable = {contentY: position, originY: origin, contentHeight, height, flickDeceleration: 1500, flickingVertically: false, flicks: [], flick(x, y) { this.flicks.push([x, y]); this.flickingVertically = true; }};
+    const flickable = {contentY: position, originY: origin, contentHeight, height, flickDeceleration: deceleration, flickingVertically: false, flicks: [], flick(x, y) { this.flicks.push([x, y]); this.flickingVertically = true; }};
     const context = vm.createContext({flickable, targetY: NaN, Qt: {styleHints: {wheelScrollLines: lines}}});
     return {flickable, context, scroll(pixelDelta, angleDelta = {x: 0, y: 0}) {
         context.event = {pixelDelta, angleDelta, accepted: false};
@@ -16,13 +18,14 @@ function fixture(position = 100, origin = 0, contentHeight = 1000, height = 200,
     }};
 }
 
-test('Touchpad input starts a native flick toward three times the pixel distance without jumping', () => {
+test('Touchpad input travels twelve times the pixel distance and settles promptly without jumping', () => {
     const f = fixture();
     const event = f.scroll({x: 0, y: -4}, {x: 0, y: -48});
-    assert.equal(f.context.targetY, 112);
+    assert.equal(f.context.targetY, 148);
     assert.equal(f.flickable.contentY, 100);
     assert.equal(f.flickable.flicks.length, 1);
-    assert.deepEqual(f.flickable.flicks[0], [0, -Math.sqrt(2 * 1500 * 12)]);
+    assert.deepEqual(f.flickable.flicks[0], [0, -1200]);
+    assert.ok(Math.abs(f.flickable.flicks[0][1]) / deceleration <= 0.1, 'A small gesture completes within 100 ms');
     assert.equal(event.accepted, true);
 });
 
@@ -31,10 +34,10 @@ test('Consecutive input accumulates while animating and direction reversal respo
     f.scroll({x: 0, y: -4});
     f.flickable.contentY = 104;
     f.scroll({x: 0, y: -4});
-    assert.equal(f.context.targetY, 124);
+    assert.equal(f.context.targetY, 196);
     assert.equal(f.flickable.contentY, 104);
     f.scroll({x: 0, y: 4});
-    assert.equal(f.context.targetY, 92);
+    assert.equal(f.context.targetY, 56);
     assert.ok(f.flickable.flicks.at(-1)[1] > 0);
 });
 
@@ -44,7 +47,16 @@ test('A new gesture starts at the current position after scrolling ends or the p
     f.flickable.flickingVertically = false;
     f.flickable.contentY = 300;
     f.scroll({x: 0, y: -4});
-    assert.equal(f.context.targetY, 312);
+    assert.equal(f.context.targetY, 348);
+});
+
+test('A large gesture retains its requested travel without hitting the native speed cap', () => {
+    const f = fixture(100, 0, 5000, 200);
+    f.scroll({x: 0, y: -100});
+    assert.equal(f.context.targetY, 1300);
+    assert.equal(f.flickable.flicks[0][1], -6000);
+    assert.ok(Math.abs(f.flickable.flicks[0][1]) < maximumVelocity);
+    assert.ok(Math.abs(f.flickable.flicks[0][1]) / deceleration <= 0.4);
 });
 
 test('Mouse wheels respect the system line count and partial wheel steps', () => {
