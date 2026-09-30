@@ -56,7 +56,9 @@ Review the proposal tomorrow at 10am p1
 Book a table Friday #Personal @errands
 ```
 
-Tasks go to Inbox unless you choose a project. Inline additions in Today start with today’s date; project groups preselect their project.
+New tasks reuse the priority, date, and project from your last successful addition, shared by inline Add and Quick Add and saved across shell restarts. Today and Tomorrow stay relative to the day you add the next task; explicit calendar dates stay fixed. Inline additions in Today start with today's date, and project groups preselect their project, ahead of remembered defaults. Your explicit selections and supported inline syntax take precedence. Without a saved project, or if it is no longer available, tasks go to Inbox.
+
+Only those three properties carry forward. Task text, descriptions, and other metadata clear after success. Cancel, failed requests, and edits to existing tasks do not change the saved defaults. Defaults belong to the connected Todoist account; switching accounts starts with the usual defaults. An unfinished Quick Add draft keeps its choices when dismissed and reopened.
 
 - Type **#** for projects, **@** (or **%**) for labels, **/** for sections, **p1–p4** for priority, **+** for an assignee in a shared project, **!** for reminders, or **{** for deadlines.
 - Choose suggestions with **↑/↓**, then **Enter** or **Tab**. Escape dismisses the picker first.

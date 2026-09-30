@@ -52,7 +52,7 @@ Item {
     }).length
     property string stateDir: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/omarchy-todoist"
 
-    signal taskAdded()
+    signal taskAdded(var task)
     signal taskUpdated(string taskId)
     signal taskCompleted(string taskId)
     signal connected()
@@ -208,7 +208,7 @@ Item {
         request("POST", "/tasks/quick", {text: text.trim(), auto_reminder: true}, token, function(data, message) {
             saving = false;
             if (message) { error = message; operationFailed(message); return; }
-            taskAdded(); refresh();
+            taskAdded(data); refresh();
         }, requestId);
         return true;
     }

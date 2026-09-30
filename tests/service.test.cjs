@@ -166,6 +166,16 @@ test('Failed additions keep a recoverable error and never emit success', () => {
     assert.equal(s.addTask('Draft', 'same-id'), true);
     assert.equal(wires[1].headers['X-Request-Id'], 'same-id');
 });
+test('Successful additions deliver the parsed task before the following sync', () => {
+    const {s, wires} = service();
+    let created;
+    s.taskAdded = task => { created = task; assert.equal(s.saving, false); assert.equal(wires.length, 1); };
+    s.addTask('Remember today #Work p1', 'create-id');
+    const task = {id: 'new', project_id: 'work', priority: 4, due: {string: 'today', date: '2026-09-29'}};
+    wires[0].respond(200, task);
+    assert.deepEqual(JSON.parse(JSON.stringify(created)), task);
+    assert.equal(wires.length, 2);
+});
 test('Rate limits back off; timeouts release loading state', () => {
     const { s, wires } = service();
     s.refresh(); wires[0].respond(429, {}, { 'Retry-After': '120' });

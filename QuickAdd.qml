@@ -15,6 +15,7 @@ Item {
         if (!service) return;
         if (!service.configured) { opened = false; service.openPanel(); return; }
         if (service) service.closePanels();
+        composer.restoreDefaults();
         opened = true;
         Qt.callLater(function() { composer.focusInput(); });
     }
