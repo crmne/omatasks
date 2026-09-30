@@ -47,8 +47,18 @@ ShellRoot {
             service.projects = [{id: "inbox", name: "Inbox", inbox_project: true}];
             service.tasks = Array.from({length: 24}, function(_, i) { return {id: String(i), content: "Task " + (i + 1) + " with a useful description", description: "Description of the task to check dragging and layout.", priority: 1, project_id: "inbox", day_order: i, due: {date: "2026-09-15"}}; });
             service.captured = []; service.completions = []; service.failNext = false; taskList.reset(); taskList.anchors.bottomMargin = 18;
-            var list = findChild(taskList, "taskListView"); list.positionViewAtBeginning();
+            var list = findChild(taskList, "taskListView"); list.cancelFlick(); list.positionViewAtBeginning();
             wait(150);
+        }
+        function test_wheel_animates_and_activates_scrollbar() {
+            var list = findChild(taskList, "taskListView"), bar = findChild(list, "taskScrollBar"), offset = list.contentY;
+            verify(bar !== null);
+            mouseWheel(list, list.width / 2, list.height / 2, 0, -120);
+            verify(list.flickingVertically, "Wheel scrolling uses native flick animation");
+            verify(bar.active, "Scrollbar stays active during animated movement");
+            verify(list.contentY < offset + 72, "Wheel input animates instead of jumping to the destination");
+            tryVerify(function() { return list.contentY >= offset + 60; }, 2000);
+            tryCompare(list, "moving", false, 2000);
         }
         function test_sync_retry_button() {
             service.error = "Could not reach Todoist. Retrying automatically.";

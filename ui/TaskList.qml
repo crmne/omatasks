@@ -205,7 +205,7 @@ FocusScope {
         spacing: 0
         cacheBuffer: Style.space(1000)
         ScrollHandler { flickable: list; enabled: list.interactive }
-        C.ScrollBar.vertical: C.ScrollBar { policy: list.contentHeight > list.height ? C.ScrollBar.AsNeeded : C.ScrollBar.AlwaysOff }
+        C.ScrollBar.vertical: C.ScrollBar { objectName: "taskScrollBar"; policy: list.contentHeight > list.height ? C.ScrollBar.AsNeeded : C.ScrollBar.AlwaysOff }
         header: Label {
             width: list.width
             height: visible ? Style.space(60) : 0
