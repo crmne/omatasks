@@ -28,6 +28,15 @@ function composer(defaults, overrides = {}, shared) {
 const saved = () => ({accountId: 'me', projectId: 'work', priority: 1, due: 'today'});
 const result = overrides => ({id: 'task', project_id: 'work', priority: 4, due: {string: 'today', date: '2026-09-29'}, ...overrides});
 
+test('Composer initialization waits for the shell to attach its service', () => {
+    const f = composer(saved());
+    f.c.service = null;
+    f.c.restoreDefaults(); f.c.rememberDefaults(result()); f.c.loadTask();
+    assert.equal(f.writes.length, 0); assert.equal(f.c.priority, 0);
+    f.c.service = f.service; f.c.restoreDefaults();
+    assert.equal(f.c.priority, 1); assert.equal(f.c.project.id, 'work');
+});
+
 test('New composers wait for preferences and account data, then share remembered defaults', () => {
     const f = composer(saved());
     f.service.preferencesLoaded = false; f.c.restoreDefaults(); assert.equal(f.c.priority, 0);

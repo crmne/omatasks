@@ -51,11 +51,12 @@ ColumnLayout {
     signal finished()
     signal cancelled()
     spacing: Style.space(10)
-    enabled: editing || (service.preferencesLoaded && service.loaded)
+    enabled: editing || (!!service && service.preferencesLoaded && service.loaded)
     Component.onCompleted: { if (editing) loadTask(); else restoreDefaults(); }
+    onServiceChanged: if (service) Qt.callLater(function() { if (root.editing && !root.originalTask) root.loadTask(); else root.restoreDefaults(); })
 
     function restoreDefaults() {
-        if (editing || submitting || draftTouched || input.text || description.text || !service.preferencesLoaded || !service.loaded || !service.user.id) return;
+        if (!service || editing || submitting || draftTouched || input.text || description.text || !service.preferencesLoaded || !service.loaded || !service.user.id) return;
         var saved = (service.preferences.composer || {}).defaults || {};
         draftAccountId = String(service.user.id);
         if (saved.accountId !== draftAccountId) saved = {};
@@ -65,7 +66,7 @@ ColumnLayout {
         due = initialDue || (typeof saved.due === "string" ? saved.due : "");
     }
     function rememberDefaults(task) {
-        if (editing || !sentDefaults || !service.preferencesLoaded || sentDefaults.accountId !== String(service.user.id || "") || !task || !task.id) return;
+        if (!service || editing || !sentDefaults || !service.preferencesLoaded || sentDefaults.accountId !== String(service.user.id || "") || !task || !task.id) return;
         var value = Number(task.priority);
         if (!Number.isInteger(value) || value < 1 || value > 4 || !task.project_id) return;
         var date = task.due ? sentDefaults.due || task.due.string || task.due.date || "" : "";
@@ -73,6 +74,7 @@ ColumnLayout {
     }
 
     function loadTask() {
+        if (!service) return;
         originalTask = JSON.parse(JSON.stringify(editingTask));
         var data = Edit.snapshot(originalTask);
         input.text = data.text; description.text = data.description; descriptionVisible = true;

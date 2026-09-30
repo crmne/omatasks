@@ -35,11 +35,12 @@ FocusScope {
     signal closeRequested()
 
     function updateOptions() {
+        if (!service) return;
         var next = service.viewOptions(view);
         if (JSON.stringify(next) !== JSON.stringify(options)) options = next;
     }
     function updateListModel() {
-        if (!list) return;
+        if (!list || !service) return;
         var offset = restoredView === view ? list.contentY - list.originY : Number(scrollPositions[view]) || 0;
         restoringScroll = true;
         list.model = rows;
@@ -49,7 +50,7 @@ FocusScope {
         Qt.callLater(restoreScroll);
     }
     function saveNavigation() {
-        if (!navigationReady || !service.preferencesLoaded) return;
+        if (!service || !navigationReady || !service.preferencesLoaded) return;
         scrollSave.stop();
         if (restoredView === view && service.loaded && !setupVisible && !restoringScroll) {
             var offset = Math.max(0, list.contentY - list.originY);
@@ -59,7 +60,7 @@ FocusScope {
         if (JSON.stringify((service.preferences.navigation || {}).state) !== JSON.stringify(state)) service.setOption("navigation", "state", state);
     }
     function restoreNavigation() {
-        if (!service.preferencesLoaded) return;
+        if (!service || !service.preferencesLoaded) return;
         var state = (service.preferences.navigation || {}).state || {}, positions = {};
         ["today", "inbox", "upcoming"].forEach(function(tab) {
             var offset = (state.scrollPositions || {})[tab];
@@ -72,7 +73,7 @@ FocusScope {
         Qt.callLater(restoreScroll);
     }
     function restoreScroll() {
-        if (!navigationReady || !service.loaded || !visible || setupVisible || list.height <= 0 || restoredView === view) return;
+        if (!service || !navigationReady || !service.loaded || !visible || setupVisible || list.height <= 0 || restoredView === view) return;
         restoringScroll = true;
         list.forceLayout();
         list.contentY = list.originY + Math.max(0, Math.min(scrollPositions[view] || 0, list.contentHeight - list.height));
@@ -90,6 +91,7 @@ FocusScope {
         selectedIds = selectedIds.filter(function(id) { return visible.indexOf(id) >= 0; });
     }
     Component.onCompleted: { updateOptions(); updateListModel(); restoreNavigation(); }
+    onServiceChanged: if (service) Qt.callLater(function() { root.updateOptions(); root.updateListModel(); root.restoreNavigation(); })
     Connections {
         target: root.service
         function onPreferencesChanged() { root.updateOptions(); }

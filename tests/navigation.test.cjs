@@ -19,6 +19,16 @@ function panel(state, overrides = {}) {
     return {p: ctx, list, service, writes, flush() { while (pending.length) pending.shift()(); }};
 }
 
+test('Panel initialization waits for the shell to attach its service', () => {
+    const f = panel({view: 'inbox', scrollPositions: {inbox: 150}});
+    f.p.service = null;
+    f.p.updateOptions(); f.p.updateListModel(); f.p.restoreNavigation(); f.p.restoreScroll(); f.p.saveNavigation(); f.flush();
+    assert.equal(f.writes.length, 0); assert.equal(f.p.navigationReady, false);
+    f.p.service = f.service;
+    f.p.updateOptions(); f.p.updateListModel(); f.p.restoreNavigation(); f.flush();
+    assert.equal(f.p.view, 'inbox'); assert.equal(f.list.contentY - f.list.originY, 150);
+});
+
 test('Restores saved tab and scroll only after preferences, tasks and panel geometry are ready', () => {
     const f = panel({view: 'upcoming', scrollPositions: {upcoming: 275}}, {preferencesLoaded: false, loaded: false});
     f.p.restoreNavigation(); f.flush();
