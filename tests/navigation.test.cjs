@@ -6,14 +6,14 @@ const vm = require('node:vm');
 
 function panel(state, overrides = {}) {
     const pending = [], writes = [];
-    const service = {preferencesLoaded: true, loaded: true, preferences: {navigation: {state}}, setOption(group, key, value) { this.preferences[group] = {[key]: value}; writes.push(value); }, ...overrides};
+    const service = {preferencesLoaded: true, loaded: true, preferences: {navigation: {state}}, viewOptions(view) { return {sorting: 'smart', ...(this.preferences[view] || {})}; }, setOption(group, key, value) { this.preferences[group] = {[key]: value}; writes.push(value); }, ...overrides};
     const list = {contentY: -20, originY: -20, contentHeight: 1200, height: 400, forceLayout() {}};
-    const ctx = vm.createContext({service, list, rows: [], scrollPositions: {}, navigationReady: false, restoredView: '', restoringScroll: false, visible: true, setupVisible: false, scrollSave: {stop() {}}, Qt: {callLater(fn) { pending.push(fn); }}});
+    const ctx = vm.createContext({service, list, rows: [], options: {sorting: 'smart'}, scrollPositions: {}, navigationReady: false, restoredView: '', restoringScroll: false, visible: true, setupVisible: false, scrollSave: {stop() {}}, Qt: {callLater(fn) { pending.push(fn); }}});
     ctx.root = ctx;
     let view = 'today';
     Object.defineProperty(ctx, 'view', {get() { return view; }, set(value) { if (value !== view) { view = value; ctx.restoredView = ''; pending.push(() => ctx.restoreScroll()); } }});
     const source = fs.readFileSync('ui/TaskList.qml', 'utf8');
-    for (const name of ['updateListModel', 'saveNavigation', 'restoreNavigation', 'restoreScroll', 'selectView']) {
+    for (const name of ['updateOptions', 'updateListModel', 'saveNavigation', 'restoreNavigation', 'restoreScroll', 'selectView']) {
         vm.runInContext(source.match(new RegExp('^    function ' + name + '\\([^]*?^    \\}', 'm'))[0], ctx);
     }
     return {p: ctx, list, service, writes, flush() { while (pending.length) pending.shift()(); }};
@@ -69,4 +69,17 @@ test('Model updates preserve current scroll and unchanged navigation does not wr
     f.p.saveNavigation(); assert.equal(f.writes.length, count);
     f.p.setupVisible = true; f.list.contentY = f.list.originY;
     f.p.saveNavigation(); assert.equal(f.writes.length, count);
+});
+
+test('Saving navigation or task defaults does not invalidate display options or reload rows', () => {
+    const f = panel({view: 'today', scrollPositions: {today: 100}});
+    f.p.restoreNavigation(); f.flush();
+    const options = f.p.options;
+    let reloads = 0;
+    f.p.updateListModel = () => { reloads++; };
+    f.list.contentY += 100; f.p.saveNavigation(); f.p.updateOptions();
+    f.service.setOption('composer', 'defaults', {priority: 1, due: 'today'}); f.p.updateOptions();
+    assert.equal(f.p.options, options); assert.equal(reloads, 0);
+    f.service.setOption('today', 'sorting', 'priority'); f.p.updateOptions();
+    assert.notEqual(f.p.options, options); assert.equal(f.p.options.sorting, 'priority');
 });

@@ -28,12 +28,16 @@ FocusScope {
     property real dragY: 0
     property real dropY: 0
     readonly property bool dragging: dragIndex >= 0
-    readonly property var options: service.viewOptions(view)
+    property var options: Model.DEFAULT_VIEW
     readonly property var rows: dragRows || heldRows || Model.viewRows(service.tasks, service.projects, service.collaborators, options, view, service.user.id, service.now)
     readonly property bool setupVisible: !service.configured || settingsOpen
     readonly property real preferredHeight: Math.min(Style.space(service.panelHeight), setupVisible ? setup.implicitHeight + Style.space(68) : Math.max(display.opened || details.opened || taskMenu.visible ? Style.space(440) : Style.space(110), list.contentHeight + header.height + status.height + selectionBar.height + Style.space(8)))
     signal closeRequested()
 
+    function updateOptions() {
+        var next = service.viewOptions(view);
+        if (JSON.stringify(next) !== JSON.stringify(options)) options = next;
+    }
     function updateListModel() {
         if (!list) return;
         var offset = restoredView === view ? list.contentY - list.originY : Number(scrollPositions[view]) || 0;
@@ -85,9 +89,10 @@ FocusScope {
         var visible = Bulk.visibleIds(rows);
         selectedIds = selectedIds.filter(function(id) { return visible.indexOf(id) >= 0; });
     }
-    Component.onCompleted: { updateListModel(); restoreNavigation(); }
+    Component.onCompleted: { updateOptions(); updateListModel(); restoreNavigation(); }
     Connections {
         target: root.service
+        function onPreferencesChanged() { root.updateOptions(); }
         function onPreferencesLoadedChanged() { if (!root.navigationReady) root.restoreNavigation(); }
         function onLoadedChanged() { if (root.service.loaded) Qt.callLater(root.restoreScroll); else root.restoredView = ""; }
     }
@@ -164,7 +169,7 @@ FocusScope {
             selectedIds = Bulk.visibleIds(rows); event.accepted = true;
         }
     }
-    onViewChanged: { restoredView = ""; cancelDrag(); clearSelection(); composerKey = ""; Qt.callLater(restoreScroll); }
+    onViewChanged: { restoredView = ""; cancelDrag(); clearSelection(); composerKey = ""; updateOptions(); Qt.callLater(restoreScroll); }
     onSetupVisibleChanged: { if (setupVisible) { cancelDrag(); clearSelection(); } else Qt.callLater(restoreScroll); }
     onVisibleChanged: { if (!visible) { saveNavigation(); cancelDrag(); clearSelection(); } else Qt.callLater(restoreScroll); }
     onComposerKeyChanged: if (!composerKey) heldRows = null
