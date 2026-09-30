@@ -19,7 +19,7 @@ WheelHandler {
         if (distance) flickable.flick(0, (distance > 0 ? -1 : 1) * Math.sqrt(2 * flickable.flickDeceleration * Math.abs(distance)));
         event.accepted = true;
     }
-    Connections {
+    property Connections movement: Connections {
         target: root.flickable
         function onMovementEnded() { root.targetY = NaN; }
         function onDraggingChanged() { root.targetY = NaN; }
