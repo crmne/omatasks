@@ -79,6 +79,7 @@ The layout follows the established editor shown in Todoist’s [Quick Add design
 
 ## Using the panel
 
+- Reopening the panel restores the last tab and each tab's scroll position, including after a shell restart. Sorting and filters remain saved separately. Menus, settings, task details, and selections close as before.
 - Click a task's circle to complete it. Todoist advances recurring tasks to their next occurrence.
 - Click a task for its full description, date/time, recurrence, duration, deadline, priority, labels, project/section, assignee, reminders, and subtask progress. Long text wraps, and only vertical scrolling is enabled.
 - **Ctrl-click** tasks to select or deselect them, then **right-click** a selected task (or choose **Actions…**) to act on the selection. **Ctrl+A** selects every task in the current filtered view; **Escape** or **Clear** clears the selection. Right-clicking an unselected task selects just that task. Selected tasks are highlighted, including appearances in multiple label groups.

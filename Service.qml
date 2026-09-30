@@ -69,7 +69,7 @@ Item {
     }
     function viewOptions(view) { return Object.assign({}, Model.DEFAULT_VIEW, preferences[view] || {}); }
     function setOption(view, key, value) {
-        var next = Object.assign({}, preferences), options = viewOptions(view);
+        var next = Object.assign({}, preferences), options = Object.assign({}, preferences[view] || {});
         options[key] = value;
         next[view] = options;
         preferences = next;

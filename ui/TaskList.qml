@@ -10,6 +10,10 @@ FocusScope {
     id: root
     required property var service
     property string view: "today"
+    property bool navigationReady: false
+    property bool restoringScroll: false
+    property string restoredView: ""
+    property var scrollPositions: ({})
     property bool settingsOpen: false
     property string composerKey: ""
     property string composerProject: ""
@@ -32,17 +36,62 @@ FocusScope {
 
     function updateListModel() {
         if (!list) return;
-        var offset = list.contentY - list.originY;
+        var offset = restoredView === view ? list.contentY - list.originY : Number(scrollPositions[view]) || 0;
+        restoringScroll = true;
         list.model = rows;
         list.forceLayout();
         list.contentY = list.originY + Math.max(0, Math.min(offset, list.contentHeight - list.height));
+        restoringScroll = false;
+        Qt.callLater(restoreScroll);
+    }
+    function saveNavigation() {
+        if (!navigationReady || !service.preferencesLoaded) return;
+        scrollSave.stop();
+        if (restoredView === view && service.loaded && !setupVisible && !restoringScroll) {
+            var offset = Math.max(0, list.contentY - list.originY);
+            if (isFinite(offset)) scrollPositions = Object.assign({}, scrollPositions, {[view]: offset});
+        }
+        var state = {view: view, scrollPositions: scrollPositions};
+        if (JSON.stringify((service.preferences.navigation || {}).state) !== JSON.stringify(state)) service.setOption("navigation", "state", state);
+    }
+    function restoreNavigation() {
+        if (!service.preferencesLoaded) return;
+        var state = (service.preferences.navigation || {}).state || {}, positions = {};
+        ["today", "inbox", "upcoming"].forEach(function(tab) {
+            var offset = (state.scrollPositions || {})[tab];
+            positions[tab] = typeof offset === "number" && isFinite(offset) && offset >= 0 ? offset : 0;
+        });
+        navigationReady = false; restoredView = "";
+        scrollPositions = positions;
+        view = ["today", "inbox", "upcoming"].indexOf(state.view) >= 0 ? state.view : "today";
+        navigationReady = true;
+        Qt.callLater(restoreScroll);
+    }
+    function restoreScroll() {
+        if (!navigationReady || !service.loaded || !visible || setupVisible || list.height <= 0 || restoredView === view) return;
+        restoringScroll = true;
+        list.forceLayout();
+        list.contentY = list.originY + Math.max(0, Math.min(scrollPositions[view] || 0, list.contentHeight - list.height));
+        restoredView = view;
+        restoringScroll = false;
+        saveNavigation();
+    }
+    function selectView(value) {
+        saveNavigation();
+        view = value;
     }
     onRowsChanged: {
         updateListModel();
         var visible = Bulk.visibleIds(rows);
         selectedIds = selectedIds.filter(function(id) { return visible.indexOf(id) >= 0; });
     }
-    Component.onCompleted: updateListModel()
+    Component.onCompleted: { updateListModel(); restoreNavigation(); }
+    Connections {
+        target: root.service
+        function onPreferencesLoadedChanged() { if (!root.navigationReady) root.restoreNavigation(); }
+        function onLoadedChanged() { if (root.service.loaded) Qt.callLater(root.restoreScroll); else root.restoredView = ""; }
+    }
+    Timer { id: scrollSave; interval: 250; onTriggered: root.saveNavigation() }
 
     function addAt(key, projectId) {
         clearSelection();
@@ -65,7 +114,7 @@ FocusScope {
         display.close();
         taskMenu.open();
     }
-    function reset() { clearSelection(); view = "today"; settingsOpen = false; display.close(); details.close(); }
+    function reset() { clearSelection(); settingsOpen = false; display.close(); details.close(); restoreNavigation(); }
     function showTask(task) { clearSelection(); selectedTask = task; details.open(); }
     function startDrag(index, point) {
         if (service.saving || composerKey || setupVisible || selectedIds.length) return;
@@ -109,15 +158,15 @@ FocusScope {
     Keys.onPressed: function(event) {
         if (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_Tab) {
             var tabs = ["today", "inbox", "upcoming"];
-            if (!dragging) view = tabs[(tabs.indexOf(view) + (event.modifiers & Qt.ShiftModifier ? 2 : 1)) % 3]; event.accepted = true;
+            if (!dragging) selectView(tabs[(tabs.indexOf(view) + (event.modifiers & Qt.ShiftModifier ? 2 : 1)) % 3]); event.accepted = true;
         }
         if (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_A && !dragging && !composerKey && !details.visible && !display.visible && !taskMenu.visible && !setupVisible) {
             selectedIds = Bulk.visibleIds(rows); event.accepted = true;
         }
     }
-    onViewChanged: { cancelDrag(); clearSelection(); composerKey = ""; list.positionViewAtBeginning(); }
-    onSetupVisibleChanged: if (setupVisible) { cancelDrag(); clearSelection(); }
-    onVisibleChanged: if (!visible) { cancelDrag(); clearSelection(); }
+    onViewChanged: { restoredView = ""; cancelDrag(); clearSelection(); composerKey = ""; Qt.callLater(restoreScroll); }
+    onSetupVisibleChanged: { if (setupVisible) { cancelDrag(); clearSelection(); } else Qt.callLater(restoreScroll); }
+    onVisibleChanged: { if (!visible) { saveNavigation(); cancelDrag(); clearSelection(); } else Qt.callLater(restoreScroll); }
     onComposerKeyChanged: if (!composerKey) heldRows = null
 
     RowLayout {
@@ -136,7 +185,7 @@ FocusScope {
                 iconDay: root.service.now.getDate()
                 bold: true
                 selected: root.view === modelData.id && !root.settingsOpen
-                onClicked: { root.view = modelData.id; root.settingsOpen = false; }
+                onClicked: { root.selectView(modelData.id); root.settingsOpen = false; }
             }
         }
         Action { id: displayButton; objectName: "displayButton"; iconName: "display"; iconSize: Style.space(17); tip: "Display"; selected: display.opened; enabled: root.service.configured; onClicked: display.opened ? display.close() : display.open() }
@@ -192,6 +241,8 @@ FocusScope {
     ListView {
         id: list
         objectName: "taskListView"
+        onContentYChanged: if (root.navigationReady && root.restoredView === root.view && !root.restoringScroll && root.visible && !root.setupVisible) scrollSave.restart()
+        onHeightChanged: Qt.callLater(root.restoreScroll)
         visible: !root.setupVisible
         anchors.top: selectionBar.bottom; anchors.topMargin: Style.space(8)
         anchors.bottom: parent.bottom

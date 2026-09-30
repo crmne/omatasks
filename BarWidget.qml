@@ -13,7 +13,7 @@ Panel {
     onServiceChanged: if (service) service.registerWidget(root)
     Component.onCompleted: if (service) service.registerWidget(root)
     Component.onDestruction: if (service) service.unregisterWidget(root)
-    onOpenedChanged: if (opened && service) { taskList.reset(); if (Date.now() - service.lastSync > 15000) service.refresh(); }
+    onOpenedChanged: if (service) { if (opened) { taskList.reset(); if (Date.now() - service.lastSync > 15000) service.refresh(); } else taskList.saveNavigation(); }
 
     WidgetButton {
         id: button
