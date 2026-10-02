@@ -10,4 +10,8 @@ ln -s "$todoist_repo" "$todoist_preview_dir/plugin"
 cp "$todoist_repo/tools/preview.qml" "$todoist_preview_dir/shell.qml"
 mkdir -p "$todoist_repo/screenshots"
 TODOIST_PREVIEW_DIR="$todoist_preview_dir" TODOIST_PREVIEW_OUT="$todoist_repo" \
-  QT_QPA_PLATFORM=offscreen QT_SCALE_FACTOR=2 timeout 20s quickshell -p "$todoist_preview_dir" --no-color
+  QT_QPA_PLATFORM=offscreen QT_SCALE_FACTOR=2 QT_QUICK_BACKEND=rhi \
+  QSG_RHI_BACKEND=opengl QSG_INFO=1 timeout 20s \
+  quickshell -p "$todoist_preview_dir" --no-color 2>&1 | tee "$todoist_preview_dir/output.log"
+rg -q 'OpenGL VENDOR: NVIDIA.*RENDERER: NVIDIA' "$todoist_preview_dir/output.log"
+! rg -q 'Loading backend software|Failed to load configuration|Failed to create' "$todoist_preview_dir/output.log"

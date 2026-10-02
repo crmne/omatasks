@@ -93,11 +93,7 @@ ShellRoot {
                 id: composer
                 x: 18; y: 18; width: parent.width - 36
                 service: service
-                text: "Review the launch plan"
-                initialProjectId: "studio"
-                due: "tomorrow at 10am"
-                priority: 2
-                taskLabels: ["next"]
+                text: "Review the launch plan tomorrow at 10am p2 #Studio @next"
             }
         }
         }
@@ -124,7 +120,7 @@ ShellRoot {
                 artwork.grabToImage(function(result) { result.saveToFile(dir + "/preview.png"); });
                 panel.grabToImage(function(result) { result.saveToFile(dir + "/screenshots/today.png"); });
             }
-            if (phase === 2) quickCard.visible = true;
+            if (phase === 2) { quickCard.visible = true; composer.closePicker(); }
             if (phase === 3) quickCard.grabToImage(function(result) { result.saveToFile(dir + "/screenshots/quick-add.png"); });
             if (phase === 4) composer.openPicker("project");
             if (phase === 5) quickCard.grabToImage(function(result) { result.saveToFile(dir + "/screenshots/quick-add-picker.png"); });
