@@ -47,7 +47,6 @@ such as **Inter** or **Sans serif**. It applies immediately to task lists, both
 task editors, menus, and settings, and is saved in `views.json`. Choose **Follow
 bar font** to inherit the bar's font, as the display configuration panel does.
 
-
 ## Quick add
 
 The default shortcut is **Alt+Space**, matching [Todoist’s macOS Option+Space shortcut](https://www.todoist.com/help/todoist/features/use-keyboard-shortcuts-in-todoist-Wyovn2). Change it under **Settings → Quick add shortcut**, then select **Apply**. Conflicting shortcuts are rejected with the existing action's name. Leave it empty to disable it. The plugin saves your preference and registers it again when the shell starts or Hyprland reloads; no manual binding is needed.
@@ -64,13 +63,14 @@ Book a table Friday #Personal @errands
 
 Tasks go to Inbox unless you choose a project. Inline additions in Today start with today’s date; project groups preselect their project.
 
-- Type **#** for projects, **@** (or **%**) for labels, **/** for sections, **p1–p4** for priority, **+** for an assignee in a shared project, **!** for reminders, or **{** for deadlines.
+- Type **#** for projects, **@** (or **%**) for labels, **/** for sections, **p1–p4** (or **!!1–!!4**) for priority, **+** for an assignee in a shared project, **!** for reminders, or **{** for deadlines.
 - Choose suggestions with **↑/↓**, then **Enter** or **Tab**. Escape dismisses the picker first.
 - Click the property chips to change them; **×** removes a selection. The **…** button reveals reminders, deadlines, sections, and assignees.
 - **↓** from the task name opens Description. **Ctrl+Enter** submits from Description; Enter in the task name submits when no picker is open.
-- Todoist parses dates and recurrence using its own API. Common English dates also have a chip preview; other supported expressions still go to Todoist unchanged. Reminder availability follows your Todoist plan.
+- Recognized shortcuts stay highlighted in the task name and update the property chips as you type or paste. Dates use Todoist's red inline highlight; priorities use their red, orange, or blue highlight. The same behavior applies to the popup and inline editor. Long task names wrap.
+- Todoist's Quick Add API uses the official apps' parser when saving. Live previews recognize common English dates and times, relative dates, recurrence, projects, sections, priorities, labels, assignees, reminders, deadlines, and durations on timed tasks. Other date expressions and account languages still go to Todoist unchanged. **No date** removes Today's default schedule. Reminder availability follows your Todoist plan.
 
-The layout follows the established editor shown in Todoist’s [Quick Add design comparison](https://www.todoist.com/help/todoist/product-updates/a-cleaner-simpler-quick-add-june-29-PuIpiLmLh), with Omarchy’s theme and fonts. See Todoist’s [Quick Add guide](https://www.todoist.com/help/todoist/features/use-task-quick-add-in-todoist-va4Lhpzz) for its input syntax.
+The layout follows Todoist’s [Quick Add design comparison](https://www.todoist.com/help/todoist/product-updates/a-cleaner-simpler-quick-add-june-29-PuIpiLmLh), with Omarchy’s theme and your chosen font. See Todoist’s [Quick Add guide](https://www.todoist.com/help/todoist/features/use-task-quick-add-in-todoist-va4Lhpzz) and [API syntax reference](https://developer.todoist.com/api/v1/#tag/Tasks/operation/quick_add_api_v1_tasks_quick_post) for its input syntax.
 
 **Escape** closes. A failed request preserves the text so you can retry. Dismissing quick add also preserves its draft for the next opening; Cancel discards it. These drafts last for the shell session.
 
@@ -137,6 +137,7 @@ retains a cached QML component, run `omarchy restart shell`.
 ```sh
 node --test tests/*.test.cjs
 ./tests/check-drag
+./tests/check-composer
 omarchy plugin validate .
 ```
 
@@ -147,6 +148,35 @@ Implementation follows the [Todoist API v1 documentation](https://developer.todo
 `./tools/render-preview` regenerates the release artwork and screenshots from the real QML components with sample data. It never accesses your account.
 
 `check-drag` runs offscreen QML interaction tests using synthetic tasks and intercepted requests. It checks clicks, multi-selection, context menus, bulk actions, deletion confirmation, drops, scrolling, scroll-position retention, and cancellation, without accessing a Todoist account. Bulk service tests cover batching, partial failures, retries, recurring completion, and account changes.
+
+`check-composer` tests both entry points, keyboard autocomplete, typed and pasted
+metadata, chip changes, description boundaries, contextual defaults, title
+wrapping, and font changes with intercepted submissions. It never accesses a
+Todoist account. Capture before/after visual evidence at 360 and 560px, plus
+settings at 420px, in light and dark themes with:
+
+```sh
+mkdir -p /tmp/omatasks-input-evidence
+TODOIST_CAPTURE_ONLY=1 TODOIST_CAPTURE_STAGE=after \
+  TODOIST_CAPTURE_DIR=/tmp/omatasks-input-evidence gpu-lock ./tests/check-composer
+```
+
+For a baseline, set `TODOIST_SOURCE` to a separate copy of the earlier revision
+and `TODOIST_CAPTURE_STAGE=before`. Captures contain synthetic data only.
+
+<details>
+<summary>Before-and-after input and font screenshots</summary>
+
+| View | Before | After |
+| --- | --- | --- |
+| 360px, dark | [Before](screenshots/input/before-composer-360-dark.png) | [After](screenshots/input/after-composer-360-dark.png) |
+| 360px, light | [Before](screenshots/input/before-composer-360-light.png) | [After](screenshots/input/after-composer-360-light.png) |
+| 560px, dark | [Before](screenshots/input/before-composer-560-dark.png) | [After](screenshots/input/after-composer-560-dark.png) |
+| 560px, light | [Before](screenshots/input/before-composer-560-light.png) | [After](screenshots/input/after-composer-560-light.png) |
+| Settings, dark | [Before](screenshots/input/before-settings-420-dark.png) | [After](screenshots/input/after-settings-420-dark.png) |
+| Settings, light | [Before](screenshots/input/before-settings-420-light.png) | [After](screenshots/input/after-settings-420-light.png) |
+
+</details>
 
 Not created by, affiliated with, or supported by Todoist.
 

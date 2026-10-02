@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+todoist_repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+todoist_test_dir=$(mktemp -d /tmp/omatasks-composer.XXXXXX)
+trap 'rm -rf -- "$todoist_test_dir"' EXIT
+ln -s "${OMARCHY_PATH:-/usr/share/omarchy}/shell/Commons" "$todoist_test_dir/Commons"
+ln -s "${OMARCHY_PATH:-/usr/share/omarchy}/shell/Ui" "$todoist_test_dir/Ui"
+ln -s "${TODOIST_SOURCE:-$todoist_repo}" "$todoist_test_dir/plugin"
+cp "$todoist_repo/tests/composer.qml" "$todoist_test_dir/shell.qml"
+if [[ ${TODOIST_CAPTURE_ONLY:-0} == 1 ]]; then
+  # Offscreen Qt defaults to software. Request the GPU explicitly for images.
+  export QT_QUICK_BACKEND=rhi QSG_RHI_BACKEND=opengl QSG_INFO=1
+fi
+TODOIST_TEST_DIR="$todoist_test_dir" QT_QPA_PLATFORM=offscreen timeout 40s \
+  quickshell -p "$todoist_test_dir" --no-color 2>&1 | tee "$todoist_test_dir/output.log"
+if [[ ${TODOIST_CAPTURE_ONLY:-0} != 1 ]]; then
+  rg -q 'COMPOSER UI RESULTS [0-9]+ passed 0 failed' "$todoist_test_dir/output.log"
+else
+  rg -q 'OpenGL VENDOR: NVIDIA.*RENDERER: NVIDIA' "$todoist_test_dir/output.log"
+  ! rg -q 'Loading backend software|Failed to load configuration|Failed to create' "$todoist_test_dir/output.log"
+fi

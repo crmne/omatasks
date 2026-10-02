@@ -41,11 +41,23 @@ ColumnLayout {
     property var activeToken: null
     property bool editingToken: false
     property int choiceIndex: 0
-    readonly property var choices: Draft.choices(pickerKind, activeToken ? activeToken.query : search.text, service, project)
+    property var highlightSpans: []
+    readonly property var parsed: editing ? {tokens: [], labels: []} : Draft.parse(input.text, service, project)
+    readonly property var shownProject: parsed.project || project
+    readonly property var shownSection: parsed.section || section
+    readonly property var shownAssignee: parsed.assignee || assignee
+    readonly property int shownPriority: parsed.priority || priority
+    readonly property string shownDeadline: parsed.deadline || deadline
+    readonly property string shownReminder: parsed.reminder || reminder
+    readonly property string shownDuration: parsed.duration || ""
+    readonly property var shownLabels: taskLabels.concat(parsed.labels.filter(function(l) { return taskLabels.indexOf(l) < 0; }))
+    readonly property var choices: Draft.choices(pickerKind, activeToken ? activeToken.query.replace(/\\(.)/g, "$1") : search.text, service, shownProject)
     readonly property var inbox: service.projects.find(function(p) { return p.inbox_project; }) || null
-    readonly property string projectName: project ? project.name : "Inbox"
-    readonly property var typedDate: editing ? null : Draft.dateToken(input.text)
-    readonly property string shownDate: typedDate ? typedDate.value : due
+    readonly property string projectName: shownProject ? shownProject.name : "Inbox"
+    readonly property var typedDate: parsed.tokens.filter(function(t) { return t.kind === "due"; }).slice(-1)[0] || null
+    readonly property string shownDate: typedDate ? /^no (?:due )?date$/i.test(typedDate.value) ? "" : typedDate.value : due
+    readonly property bool dark: Color.popups.background.r * 0.299 + Color.popups.background.g * 0.587 + Color.popups.background.b * 0.114 < 0.5
+    onParsedChanged: Qt.callLater(updateHighlights)
     signal finished()
     signal cancelled()
     spacing: Style.space(10)
@@ -102,26 +114,86 @@ ColumnLayout {
         Qt.callLater(function() { search.forceActiveFocus(); });
     }
     function updateToken() {
-        if (editing || editingToken || !input.activeFocus) return;
-        var priorityToken = /(^|\s)p([1-4])\s$/i.exec(input.text.slice(0, input.cursorPosition));
-        if (priorityToken) {
-            editingToken = true; priority = Number(priorityToken[2]);
-            input.remove(priorityToken.index + priorityToken[1].length, input.cursorPosition);
-            closePicker(); editingToken = false; return;
-        }
+        if (editing || editingToken || input.inputMethodComposing || !input.activeFocus) return;
         var token = Draft.tokenAt(input.text, input.cursorPosition);
+        // A complete shortcut is already reflected in the chips. Keep it in
+        // the title, with a highlight, and stop offering autocomplete for it.
+        if (token && (token.kind !== "label" || /\s$/.test(token.query)) && parsed.tokens.some(function(t) { return t.start === token.start && t.end <= input.cursorPosition; })) token = null;
         if (token) { activeToken = token; pickerKind = token.kind; choiceIndex = 0; }
         else if (activeToken) closePicker();
     }
-    function setDate(value) {
+    function removeTyped(kind, value) {
+        var tokens = parsed.tokens.filter(function(t) { return t.kind === kind && (value === undefined || t.value === value); });
         editingToken = true;
-        if (typedDate) input.remove(typedDate.start, typedDate.end);
-        due = value;
+        tokens.slice().reverse().forEach(function(t) { input.remove(t.start, t.end); });
         editingToken = false;
+        closePicker();
+    }
+    function clearProperty(kind, value) {
+        removeTyped(kind, value);
+        if (kind === "priority") priority = 0;
+        if (kind === "deadline") deadline = "";
+        if (kind === "reminder") reminder = "";
+        if (kind === "section") section = null;
+        if (kind === "assignee") assignee = null;
+        if (kind === "label") taskLabels = taskLabels.filter(function(l) { return l !== value; });
+    }
+    function priorityColor(value) { return value > 0 && value < 4 ? (dark ? ["#ff5c50", "#ff9a00", "#438eff"] : ["#d1453b", "#eb8909", "#246fe0"])[value - 1] : Color.popups.text; }
+    function dateColor(value) {
+        if (!value) return Color.popups.text;
+        var offset = Draft.dateOffset(value, service.now, service.user);
+        if (offset === null || offset > 7) return Color.popups.text;
+        if (offset < 0) return priorityColor(1);
+        if (offset === 0) return dark ? "#25b84c" : "#058527";
+        if (offset === 1) return dark ? "#ff9a00" : "#ad6200";
+        return dark ? "#b38ded" : "#692fc2";
+    }
+    function highlightColor(token) {
+        if (token.kind === "due" || token.kind === "deadline" || token.kind === "priority" && token.value === 1) return dark ? "#722724" : "#ffe3e3";
+        if (token.kind === "priority" && token.value === 2) return dark ? "#714b20" : "#fff0d1";
+        if (token.kind === "priority" && token.value === 3) return dark ? "#244771" : "#e1edff";
+        return dark ? "#414141" : "#eeeeee";
+    }
+    function highlightRects() {
+        // Observe text layout changes, including font changes and wrapping.
+        input.cursorRectangle; input.width; input.contentHeight; input.font;
+        var rects = [];
+        parsed.tokens.forEach(function(token) {
+            if (token.kind === "due" && token !== root.typedDate) return;
+            if (token.end > input.length) return;
+            var segment = null;
+            for (var i = token.start; i < token.end; i++) {
+                var first = input.positionToRectangle(i), last = input.positionToRectangle(i + 1);
+                if (!segment || segment.y !== first.y) {
+                    segment = {kind: token.kind, value: token.value, x: first.x - 2, y: first.y, width: 0, height: first.height};
+                    rects.push(segment);
+                }
+                segment.width = Math.max(segment.width, (last.y === first.y ? last.x : first.x + metrics.advanceWidth(input.text[i])) - segment.x + 2);
+            }
+        });
+        return rects;
+    }
+    function updateHighlights() { highlightSpans = highlightRects(); }
+    function setDate(value) {
+        removeTyped("due");
+        due = value;
     }
     function choose(row) {
         if (!row) return;
         var kind = pickerKind, token = activeToken;
+        if (!editing && token) {
+            editingToken = true;
+            input.remove(token.start, token.end);
+            var spelling = row.value ? Draft.spelling(kind, row.value) + " " : "";
+            input.insert(token.start, spelling);
+            input.cursorPosition = token.start + spelling.length;
+            closePicker(); focusInput(); editingToken = false;
+            return;
+        }
+        if (!editing) {
+            if (kind === "project") { removeTyped("section"); removeTyped("assignee"); }
+            if (kind !== "label") removeTyped(kind);
+        }
         if (kind === "project") { project = row.value; section = null; assignee = null; }
         if (kind === "section") section = row.value;
         if (kind === "label" && taskLabels.indexOf(row.value) < 0) taskLabels = taskLabels.concat([row.value]);
@@ -148,6 +220,7 @@ ColumnLayout {
             else if (event.key === Qt.Key_Down || event.key === Qt.Key_Up) { moveChoice(event.key === Qt.Key_Down ? 1 : -1); event.accepted = true; }
             else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Tab) { choose(choices[choiceIndex]); event.accepted = true; }
         } else if (event.key === Qt.Key_Escape) { cancelled(); event.accepted = true; }
+        else if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) { submit(); event.accepted = true; }
         else if (event.key === Qt.Key_Down && input.activeFocus) { descriptionVisible = true; description.forceActiveFocus(); event.accepted = true; }
     }
     function submit() {
@@ -155,28 +228,51 @@ ColumnLayout {
         if (editing) { submitEdit(); return; }
         var text = Draft.quickText({text: input.text, description: description.text, project: project,
             section: section, labels: taskLabels, priority: priority, due: due,
-            deadline: deadline, reminder: reminder, assignee: assignee});
+            deadline: deadline, reminder: reminder, assignee: assignee, parsed: parsed});
         if (sentText !== text || !requestId) requestId = Model.uuid();
         sentText = text; message = "";
         submitting = service.addTask(text, requestId);
         if (!submitting) message = service.error || "Please wait for the current request to finish.";
     }
 
-    C.TextField {
+    FontMetrics { id: metrics; font: input.font }
+    C.TextArea {
         id: input
         objectName: "taskName"
         Layout.fillWidth: true
-        implicitHeight: Style.space(30)
+        implicitHeight: Math.max(Style.space(30), contentHeight)
+        wrapMode: TextEdit.Wrap
+        textFormat: TextEdit.PlainText
         padding: 0; color: Color.popups.text
         font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true
         placeholderText: "Task name"; placeholderTextColor: Qt.rgba(Color.popups.text.r, Color.popups.text.g, Color.popups.text.b, 0.4)
         selectionColor: Color.accent; selectedTextColor: Color.popups.background
-        background: Item {}
+        // Keep a plain TextArea for cursor movement, selection, undo, paste
+        // and input methods. Only the recognized spans' backgrounds are drawn.
+        background: Item {
+            clip: true
+            Repeater {
+                model: root.highlightSpans
+                Rectangle {
+                    required property var modelData
+                    objectName: "highlight_" + modelData.kind
+                    x: modelData.x; y: modelData.y
+                    width: modelData.width; height: modelData.height
+                    radius: 2
+                    color: root.highlightColor(modelData)
+                }
+            }
+        }
         enabled: !root.submitting
-        onTextEdited: root.updateToken()
+        onTextChanged: { root.updateToken(); Qt.callLater(root.updateHighlights); }
         onCursorPositionChanged: root.updateToken()
-        onAccepted: if (!root.pickerKind) root.submit()
-        Keys.onPressed: event => root.handleKey(event)
+        onContentHeightChanged: Qt.callLater(root.updateHighlights)
+        onWidthChanged: Qt.callLater(root.updateHighlights)
+        onFontChanged: Qt.callLater(root.updateHighlights)
+        Keys.onPressed: function(event) {
+            root.handleKey(event);
+            if (!event.accepted && !(event.modifiers & Qt.ShiftModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) { root.submit(); event.accepted = true; }
+        }
     }
     C.ScrollView {
         Layout.fillWidth: true
@@ -207,15 +303,16 @@ ColumnLayout {
         Layout.fillWidth: true
         spacing: Style.space(6)
         enabled: !root.submitting
-        Chip { fontFamily: root.fontFamily; text: root.shownDate || "Date"; iconName: "today"; removable: root.shownDate !== ""; maximumWidth: Math.min(root.width, Style.space(230)); onClicked: root.openPicker("due"); onRemoved: root.setDate("") }
-        Chip { fontFamily: root.fontFamily; text: root.priority ? "P" + root.priority : "Priority"; iconName: "flag"; foreground: root.priority > 0 && root.priority < 4 ? ["#ef615b", "#e49b40", "#5295e4"][root.priority - 1] : Color.popups.text; removable: root.priority > 0; onClicked: root.openPicker("priority"); onRemoved: root.priority = 0 }
-        Chip { fontFamily: root.fontFamily; visible: root.deadline !== ""; text: root.deadline; iconName: "upcoming"; removable: true; onClicked: root.openPicker("deadline"); onRemoved: root.deadline = "" }
-        Chip { fontFamily: root.fontFamily; visible: root.reminder !== ""; text: root.reminder; iconName: "bell"; removable: true; onClicked: root.openPicker("reminder"); onRemoved: root.reminder = "" }
-        Chip { fontFamily: root.fontFamily; visible: root.section !== null; text: root.section ? "/ " + root.section.name : ""; removable: true; maximumWidth: root.width; onClicked: root.openPicker("section"); onRemoved: root.section = null }
-        Chip { fontFamily: root.fontFamily; visible: root.assignee !== null; text: root.assignee ? "+ " + root.assignee.name : ""; removable: true; maximumWidth: root.width; onClicked: root.openPicker("assignee"); onRemoved: root.assignee = null }
+        Chip { fontFamily: root.fontFamily; objectName: "dateChip"; foreground: root.dateColor(root.shownDate); text: root.shownDate || "Date"; iconName: "today"; removable: root.shownDate !== ""; maximumWidth: Math.min(root.width, Style.space(230)); onClicked: root.openPicker("due"); onRemoved: root.setDate("") }
+        Chip { fontFamily: root.fontFamily; objectName: "priorityChip"; text: root.shownPriority ? "P" + root.shownPriority : "Priority"; iconName: "flag"; foreground: root.priorityColor(root.shownPriority); removable: root.shownPriority > 0; onClicked: root.openPicker("priority"); onRemoved: root.clearProperty("priority") }
+        Chip { fontFamily: root.fontFamily; visible: root.shownDeadline !== ""; text: root.shownDeadline; iconName: "upcoming"; removable: true; onClicked: root.openPicker("deadline"); onRemoved: root.clearProperty("deadline") }
+        Chip { fontFamily: root.fontFamily; visible: root.shownReminder !== ""; text: root.shownReminder; iconName: "bell"; removable: true; onClicked: root.openPicker("reminder"); onRemoved: root.clearProperty("reminder") }
+        Chip { fontFamily: root.fontFamily; visible: root.shownDuration !== ""; text: root.shownDuration.replace(/^for /, ""); removable: true; onRemoved: root.removeTyped("duration") }
+        Chip { fontFamily: root.fontFamily; visible: root.shownSection !== null; text: root.shownSection ? "/ " + root.shownSection.name : ""; removable: true; maximumWidth: root.width; onClicked: root.openPicker("section"); onRemoved: root.clearProperty("section") }
+        Chip { fontFamily: root.fontFamily; visible: root.shownAssignee !== null; text: root.shownAssignee ? "+ " + root.shownAssignee.name : ""; removable: true; maximumWidth: root.width; onClicked: root.openPicker("assignee"); onRemoved: root.clearProperty("assignee") }
         Repeater {
-            model: root.taskLabels
-            Chip { fontFamily: root.fontFamily; required property string modelData; text: modelData; iconName: "label"; removable: true; maximumWidth: root.width; onClicked: root.openPicker("label"); onRemoved: root.taskLabels = root.taskLabels.filter(function(l) { return l !== modelData; }) }
+            model: root.shownLabels
+            Chip { fontFamily: root.fontFamily; required property string modelData; text: modelData; iconName: "label"; removable: true; maximumWidth: root.width; onClicked: root.openPicker("label"); onRemoved: root.clearProperty("label", modelData) }
         }
         Action { fontFamily: root.fontFamily; iconName: "label"; tip: "Labels (@)"; onClicked: root.openPicker("label") }
         Action { fontFamily: root.fontFamily; iconName: "more"; tip: "More task options"; selected: more.visible; onClicked: more.visible = !more.visible }
@@ -226,8 +323,8 @@ ColumnLayout {
         Layout.fillWidth: true; spacing: Style.space(6)
         Action { fontFamily: root.fontFamily; text: "Reminder"; iconName: "bell"; onClicked: { more.visible = false; root.replacingReminder = ""; root.openPicker("reminder"); } }
         Action { fontFamily: root.fontFamily; text: "Deadline"; iconName: "upcoming"; onClicked: { more.visible = false; root.openPicker("deadline"); } }
-        Action { fontFamily: root.fontFamily; text: "Section"; enabled: root.project !== null; onClicked: { more.visible = false; root.openPicker("section"); } }
-        Action { fontFamily: root.fontFamily; text: "Assignee"; enabled: root.project !== null && root.project.is_shared === true; onClicked: { more.visible = false; root.openPicker("assignee"); } }
+        Action { fontFamily: root.fontFamily; text: "Section"; enabled: root.shownProject !== null; onClicked: { more.visible = false; root.openPicker("section"); } }
+        Action { fontFamily: root.fontFamily; text: "Assignee"; enabled: root.shownProject !== null && root.shownProject.is_shared === true; onClicked: { more.visible = false; root.openPicker("assignee"); } }
     }
     ColumnLayout {
         visible: root.editing
@@ -287,7 +384,7 @@ ColumnLayout {
                     padding: Style.space(6)
                     contentItem: RowLayout {
                         spacing: Style.space(8)
-                        ViewIcon { visible: !!option.modelData.icon; name: option.modelData.icon || ""; color: option.modelData.color || Color.popups.text }
+                        ViewIcon { visible: !!option.modelData.icon; name: option.modelData.icon || ""; color: root.pickerKind === "priority" ? root.priorityColor(option.modelData.value) : option.modelData.color || Color.popups.text }
                         Label { font.family: root.fontFamily; visible: !!option.modelData.prefix; text: option.modelData.prefix || ""; opacity: 0.6 }
                         Label { font.family: root.fontFamily; Layout.fillWidth: true; text: option.modelData.label; font.pixelSize: Style.font.bodySmall }
                         Label { font.family: root.fontFamily; Layout.maximumWidth: parent.width * 0.35; text: option.modelData.detail || ""; opacity: 0.4; font.pixelSize: Style.font.caption }
@@ -296,7 +393,7 @@ ColumnLayout {
                     onClicked: root.choose(modelData)
                 }
             }
-            Label { font.family: root.fontFamily; visible: root.choices.length === 0; Layout.fillWidth: true; text: root.pickerKind === "section" && !root.project ? "Choose a project first." : root.pickerKind === "assignee" && (!root.project || !root.project.is_shared) ? "Choose a shared project first." : "No matches"; opacity: 0.5; wrapMode: Text.WordWrap }
+            Label { font.family: root.fontFamily; visible: root.choices.length === 0; Layout.fillWidth: true; text: root.pickerKind === "section" && !root.shownProject ? "Choose a project first." : root.pickerKind === "assignee" && (!root.shownProject || !root.shownProject.is_shared) ? "Choose a shared project first." : "No matches"; opacity: 0.5; wrapMode: Text.WordWrap }
             Label { font.family: root.fontFamily; visible: root.pickerKind === "reminder"; Layout.fillWidth: true; text: "Before-task reminders need a task time. Availability follows your Todoist plan."; font.pixelSize: Style.font.caption; opacity: 0.5; wrapMode: Text.WordWrap; elide: Text.ElideNone }
         }
     }
@@ -304,7 +401,7 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         spacing: Style.space(4)
-        Action { fontFamily: root.fontFamily; Layout.fillWidth: true; Layout.minimumWidth: 0; maximumWidth: root.width; leftAligned: true; text: (root.project && !root.project.inbox_project ? "# " : "") + root.projectName + " ▾"; iconName: !root.project || root.project.inbox_project ? "inbox" : ""; tip: "Project (#)"; enabled: !root.submitting; onClicked: root.openPicker("project") }
+        Action { fontFamily: root.fontFamily; Layout.fillWidth: true; Layout.minimumWidth: 0; maximumWidth: root.width; leftAligned: true; text: (root.shownProject && !root.shownProject.inbox_project ? "# " : "") + root.projectName + " ▾"; iconName: !root.shownProject || root.shownProject.inbox_project ? "inbox" : ""; tip: "Project (#)"; enabled: !root.submitting; onClicked: root.openPicker("project") }
         Action { fontFamily: root.fontFamily; text: "Cancel"; enabled: !root.submitting; onClicked: { root.reset(); root.cancelled(); } }
         Action { fontFamily: root.fontFamily; text: root.submitting ? (root.editing ? "Saving…" : "Adding…") : root.editing ? "Save" : "Add task"; selected: true; enabled: !root.service.saving && input.text.trim().length > 0; onClicked: root.submit() }
     }
