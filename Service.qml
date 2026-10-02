@@ -52,7 +52,7 @@ Item {
     }).length
     property string stateDir: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/omarchy-todoist"
 
-    signal taskAdded()
+    signal taskAdded(var task)
     signal taskUpdated(string taskId)
     signal taskCompleted(string taskId)
     signal connected()
@@ -69,7 +69,7 @@ Item {
     }
     function viewOptions(view) { return Object.assign({}, Model.DEFAULT_VIEW, preferences[view] || {}); }
     function setOption(view, key, value) {
-        var next = Object.assign({}, preferences), options = viewOptions(view);
+        var next = Object.assign({}, preferences), options = Object.assign({}, preferences[view] || {});
         options[key] = value;
         next[view] = options;
         preferences = next;
@@ -208,7 +208,7 @@ Item {
         request("POST", "/tasks/quick", {text: text.trim(), auto_reminder: true}, token, function(data, message) {
             saving = false;
             if (message) { error = message; operationFailed(message); return; }
-            taskAdded(); refresh();
+            taskAdded(data); refresh();
         }, requestId);
         return true;
     }

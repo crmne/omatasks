@@ -33,6 +33,9 @@ ColumnLayout {
     property bool descriptionVisible: false
     property string requestId: ""
     property string sentText: ""
+    property var sentDefaults: null
+    property bool draftTouched: false
+    property string draftAccountId: ""
     property bool submitting: false
     property string message: ""
     property alias text: input.text
@@ -48,9 +51,30 @@ ColumnLayout {
     signal finished()
     signal cancelled()
     spacing: Style.space(10)
-    Component.onCompleted: if (editing) loadTask()
+    enabled: editing || (!!service && service.preferencesLoaded && service.loaded)
+    Component.onCompleted: { if (editing) loadTask(); else restoreDefaults(); }
+    onServiceChanged: if (service) Qt.callLater(function() { if (root.editing && !root.originalTask) root.loadTask(); else root.restoreDefaults(); })
+
+    function restoreDefaults() {
+        if (!service || editing || submitting || draftTouched || input.text || description.text || !service.preferencesLoaded || !service.loaded || !service.user.id) return;
+        var saved = (service.preferences.composer || {}).defaults || {};
+        draftAccountId = String(service.user.id);
+        if (saved.accountId !== draftAccountId) saved = {};
+        var projectId = initialProjectId || (typeof saved.projectId === "string" ? saved.projectId : ""), candidate = service.projectMap[projectId];
+        project = candidate && !candidate.is_archived && !candidate.is_deleted ? candidate : null;
+        priority = typeof saved.priority === "number" && Number.isInteger(saved.priority) && saved.priority >= 0 && saved.priority <= 4 ? saved.priority : 0;
+        due = initialDue || (typeof saved.due === "string" ? saved.due : "");
+    }
+    function rememberDefaults(task) {
+        if (!service || editing || !sentDefaults || !service.preferencesLoaded || sentDefaults.accountId !== String(service.user.id || "") || !task || !task.id) return;
+        var value = Number(task.priority);
+        if (!Number.isInteger(value) || value < 1 || value > 4 || !task.project_id) return;
+        var date = task.due ? sentDefaults.due || task.due.string || task.due.date || "" : "";
+        service.setOption("composer", "defaults", {accountId: sentDefaults.accountId, projectId: String(task.project_id), priority: value === 1 && !sentDefaults.priority ? 0 : 5 - value, due: String(date)});
+    }
 
     function loadTask() {
+        if (!service) return;
         originalTask = JSON.parse(JSON.stringify(editingTask));
         var data = Edit.snapshot(originalTask);
         input.text = data.text; description.text = data.description; descriptionVisible = true;
@@ -93,6 +117,8 @@ ColumnLayout {
         project = service.projectMap[initialProjectId] || null; section = null; taskLabels = [];
         priority = 0; due = initialDue; deadline = ""; reminder = ""; assignee = null;
         pickerKind = ""; activeToken = null; requestId = ""; message = "";
+        sentText = ""; sentDefaults = null; draftTouched = false; draftAccountId = "";
+        restoreDefaults();
     }
     function closePicker() { pickerKind = ""; activeToken = null; }
     function openPicker(kind) {
@@ -113,6 +139,7 @@ ColumnLayout {
         else if (activeToken) closePicker();
     }
     function setDate(value) {
+        draftTouched = true;
         editingToken = true;
         if (typedDate) input.remove(typedDate.start, typedDate.end);
         due = value;
@@ -120,6 +147,7 @@ ColumnLayout {
     }
     function choose(row) {
         if (!row) return;
+        draftTouched = true;
         var kind = pickerKind, token = activeToken;
         if (kind === "project") { project = row.value; section = null; assignee = null; }
         if (kind === "section") section = row.value;
@@ -152,11 +180,11 @@ ColumnLayout {
     function submit() {
         if (!input.text.trim() || submitting) return;
         if (editing) { submitEdit(); return; }
-        var text = Draft.quickText({text: input.text, description: description.text, project: project,
-            section: section, labels: taskLabels, priority: priority, due: due,
-            deadline: deadline, reminder: reminder, assignee: assignee});
+        if (!service.preferencesLoaded || !service.loaded || !service.user.id) return;
+        var text = Draft.quickText({text: input.text, description: description.text, project: project, section: section, labels: taskLabels, priority: priority, due: due, deadline: deadline, reminder: reminder, assignee: assignee});
         if (sentText !== text || !requestId) requestId = Model.uuid();
         sentText = text; message = "";
+        sentDefaults = {accountId: String(service.user.id), priority: priority, due: shownDate};
         submitting = service.addTask(text, requestId);
         if (!submitting) message = service.error || "Please wait for the current request to finish.";
     }
@@ -172,7 +200,7 @@ ColumnLayout {
         selectionColor: Color.accent; selectedTextColor: Color.popups.background
         background: Item {}
         enabled: !root.submitting
-        onTextEdited: root.updateToken()
+        onTextEdited: { root.draftTouched = true; root.updateToken(); }
         onCursorPositionChanged: root.updateToken()
         onAccepted: if (!root.pickerKind) root.submit()
         Keys.onPressed: event => root.handleKey(event)
@@ -194,6 +222,7 @@ ColumnLayout {
             placeholderText: "Description"; placeholderTextColor: Qt.rgba(Color.popups.text.r, Color.popups.text.g, Color.popups.text.b, 0.4)
             background: Item {}
             enabled: !root.submitting
+            onTextChanged: if (activeFocus) root.draftTouched = true
             Keys.onPressed: function(event) {
                 root.handleKey(event);
                 if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) { root.submit(); event.accepted = true; }
@@ -207,7 +236,7 @@ ColumnLayout {
         spacing: Style.space(6)
         enabled: !root.submitting
         Chip { text: root.shownDate || "Date"; iconName: "today"; removable: root.shownDate !== ""; maximumWidth: Math.min(root.width, Style.space(230)); onClicked: root.openPicker("due"); onRemoved: root.setDate("") }
-        Chip { text: root.priority ? "P" + root.priority : "Priority"; iconName: "flag"; foreground: root.priority > 0 && root.priority < 4 ? ["#ef615b", "#e49b40", "#5295e4"][root.priority - 1] : Color.popups.text; removable: root.priority > 0; onClicked: root.openPicker("priority"); onRemoved: root.priority = 0 }
+        Chip { text: root.priority ? "P" + root.priority : "Priority"; iconName: "flag"; foreground: root.priority > 0 && root.priority < 4 ? ["#ef615b", "#e49b40", "#5295e4"][root.priority - 1] : Color.popups.text; removable: root.priority > 0; onClicked: root.openPicker("priority"); onRemoved: { root.draftTouched = true; root.priority = 0; } }
         Chip { visible: root.deadline !== ""; text: root.deadline; iconName: "upcoming"; removable: true; onClicked: root.openPicker("deadline"); onRemoved: root.deadline = "" }
         Chip { visible: root.reminder !== ""; text: root.reminder; iconName: "bell"; removable: true; onClicked: root.openPicker("reminder"); onRemoved: root.reminder = "" }
         Chip { visible: root.section !== null; text: root.section ? "/ " + root.section.name : ""; removable: true; maximumWidth: root.width; onClicked: root.openPicker("section"); onRemoved: root.section = null }
@@ -310,7 +339,14 @@ ColumnLayout {
     Label { Layout.fillWidth: true; visible: text !== ""; text: root.message; wrapMode: Text.WordWrap; elide: Text.ElideNone; color: Color.urgent }
     Connections {
         target: root.service
-        function onTaskAdded() { if (root.submitting) { root.submitting = false; root.reset(); root.finished(); } }
+        function onPreferencesLoadedChanged() { root.restoreDefaults(); }
+        function onPreferencesChanged() { root.restoreDefaults(); }
+        function onLoadedChanged() { root.restoreDefaults(); }
+        function onUserChanged() {
+            if (!root.editing && root.draftAccountId && root.draftAccountId !== String(root.service.user.id || "")) { root.submitting = false; root.reset(); }
+            else root.restoreDefaults();
+        }
+        function onTaskAdded(task) { if (!root.editing && root.submitting) { root.rememberDefaults(task); root.submitting = false; root.reset(); root.finished(); } }
         function onTaskUpdated(taskId) { if (root.editing && root.submitting && String(root.editingTask.id) === taskId) { root.submitting = false; root.finished(); } }
         function onOperationFailed(message) { if (root.submitting) { root.submitting = false; root.message = message; root.focusInput(); } }
     }

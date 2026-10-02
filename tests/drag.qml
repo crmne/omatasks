@@ -46,7 +46,7 @@ ShellRoot {
             service.user = {id: "me"}; service.preferences = {};
             service.projects = [{id: "inbox", name: "Inbox", inbox_project: true}];
             service.tasks = Array.from({length: 24}, function(_, i) { return {id: String(i), content: "Task " + (i + 1) + " with a useful description", description: "Description of the task to check dragging and layout.", priority: 1, project_id: "inbox", day_order: i, due: {date: "2026-09-15"}}; });
-            service.captured = []; service.completions = []; service.failNext = false; taskList.reset(); taskList.anchors.bottomMargin = 18;
+            service.captured = []; service.completions = []; service.failNext = false; taskList.reset(); taskList.view = "today"; taskList.anchors.bottomMargin = 18;
             var list = findChild(taskList, "taskListView"); list.positionViewAtBeginning();
             wait(150);
         }

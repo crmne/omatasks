@@ -19,10 +19,10 @@ function quickText(draft) {
     // Preserve Todoist's inline description syntax if the user pasted it.
     var split = text.indexOf(" // ");
     if (split >= 0) { description = [text.slice(split + 4), description].filter(Boolean).join("\n"); text = text.slice(0, split).trim(); }
-    if (draft.project) suffix.push("#" + escapeName(draft.project.name));
+    if (draft.project && !/(^|\s)#[^\s]+/.test(text)) suffix.push("#" + escapeName(draft.project.name));
     if (draft.section) suffix.push("/" + escapeName(draft.section.name));
     (draft.labels || []).forEach(function(label) { suffix.push("@" + escapeName(label)); });
-    if (draft.priority) suffix.push("p" + draft.priority);
+    if (draft.priority && !/(^|\s)(?:p|!!)[1-4](?=\s|$)/i.test(text)) suffix.push("p" + draft.priority);
     if (draft.assignee) suffix.push("+" + escapeName(draft.assignee.name || draft.assignee.full_name));
     if (draft.due && !dateToken(text)) suffix.push(draft.due);
     if (draft.deadline) suffix.push("{" + draft.deadline.replace(/[{}]/g, "") + "}");

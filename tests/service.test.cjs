@@ -43,6 +43,17 @@ function reorderFixture() {
     return fixture;
 }
 const commandsOf = request => JSON.parse(new URLSearchParams(request.body).get('commands'));
+test('Preference writes preserve other settings and view defaults remain available', () => {
+    const {s} = service();
+    s.preferences = {panelWidth: 500, today: {sorting: 'priority'}, quickAddShortcut: 'Alt+Space'};
+    let saved;
+    s.settingsFile.setText = value => { saved = JSON.parse(value); };
+    s.setOption('navigation', 'state', {view: 'inbox', scrollPositions: {today: 100}});
+    assert.deepEqual(saved.navigation, {state: {view: 'inbox', scrollPositions: {today: 100}}});
+    assert.equal(saved.today.sorting, 'priority'); assert.equal(saved.panelWidth, 500);
+    assert.equal(s.viewOptions('today').assignee, 'mine');
+    s.resetView('today'); assert.equal(s.preferences.navigation.state.view, 'inbox');
+});
 test('Reordering is optimistic, cancels stale sync, persists day order and switches to Manual', () => {
     const {s, wires} = reorderFixture();
     s.refresh();
@@ -154,6 +165,16 @@ test('Failed additions keep a recoverable error and never emit success', () => {
     assert.ok(s.failed.includes('500'));
     assert.equal(s.addTask('Draft', 'same-id'), true);
     assert.equal(wires[1].headers['X-Request-Id'], 'same-id');
+});
+test('Successful additions deliver the parsed task before the following sync', () => {
+    const {s, wires} = service();
+    let created;
+    s.taskAdded = task => { created = task; assert.equal(s.saving, false); assert.equal(wires.length, 1); };
+    s.addTask('Remember today #Work p1', 'create-id');
+    const task = {id: 'new', project_id: 'work', priority: 4, due: {string: 'today', date: '2026-09-29'}};
+    wires[0].respond(200, task);
+    assert.deepEqual(JSON.parse(JSON.stringify(created)), task);
+    assert.equal(wires.length, 2);
 });
 test('Rate limits back off; timeouts release loading state', () => {
     const { s, wires } = service();

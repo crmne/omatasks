@@ -45,3 +45,9 @@ test('Typed dates take precedence over the Today view default, while arbitrary i
   assert.equal(draft.dateToken('Review every other Tuesday at 10am').value, 'every other Tuesday at 10am');
   assert.equal(draft.dateToken('Review // Tomorrow is background context'), null);
 });
+test('Explicit inline project and priority override remembered choices without duplicate tokens', () => {
+  const defaults = {project: {name: 'Work'}, priority: 1, due: 'today'};
+  assert.equal(draft.quickText(input({...defaults, text: 'Review #Other p2 tomorrow'})), 'Review #Other p2 tomorrow');
+  assert.equal(draft.quickText(input({...defaults, text: 'Review #Other\\ Project !!3'})), 'Review #Other\\ Project !!3 today');
+  assert.equal(draft.quickText(input({...defaults, text: 'Review // #Other p2 tomorrow'})), 'Review #Work p1 today // #Other p2 tomorrow');
+});
