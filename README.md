@@ -42,10 +42,9 @@ Temporary sync failures retry automatically after 5 seconds, with increasing del
 
 The settings button opens panel size, account, and shortcut settings inside the panel. Disconnect clears the saved token and account data.
 
-**Settings → Font** lets you search installed fonts and use a proportional face
-such as **Inter** or **Sans serif**. It applies immediately to task lists, both
-task editors, menus, and settings, and is saved in `views.json`. Choose **Follow
-bar font** to inherit the bar's font, as the display configuration panel does.
+Task lists, both task editors, menus, and settings inherit the bar's font,
+matching `omarchy-hyprmoncfg`. When no bar is available, they use the shell's
+default font. OmaTasks has no separate font setting.
 
 ## Quick add
 
@@ -70,7 +69,7 @@ Tasks go to Inbox unless you choose a project. Inline additions in Today start w
 - Recognized shortcuts stay highlighted in the task name and update the property chips as you type or paste. Dates use Todoist's red inline highlight; priorities use their red, orange, or blue highlight. The same behavior applies to the popup and inline editor. Long task names wrap.
 - Todoist's Quick Add API uses the official apps' parser when saving. Live previews recognize common English dates and times, relative dates, recurrence, projects, sections, priorities, labels, assignees, reminders, deadlines, and durations on timed tasks. Other date expressions and account languages still go to Todoist unchanged. **No date** removes Today's default schedule. Reminder availability follows your Todoist plan.
 
-The layout follows Todoist’s [Quick Add design comparison](https://www.todoist.com/help/todoist/product-updates/a-cleaner-simpler-quick-add-june-29-PuIpiLmLh), with Omarchy’s theme and your chosen font. See Todoist’s [Quick Add guide](https://www.todoist.com/help/todoist/features/use-task-quick-add-in-todoist-va4Lhpzz) and [API syntax reference](https://developer.todoist.com/api/v1/#tag/Tasks/operation/quick_add_api_v1_tasks_quick_post) for its input syntax.
+The layout follows Todoist’s [Quick Add design comparison](https://www.todoist.com/help/todoist/product-updates/a-cleaner-simpler-quick-add-june-29-PuIpiLmLh), with Omarchy’s theme and bar font. See Todoist’s [Quick Add guide](https://www.todoist.com/help/todoist/features/use-task-quick-add-in-todoist-va4Lhpzz) and [API syntax reference](https://developer.todoist.com/api/v1/#tag/Tasks/operation/quick_add_api_v1_tasks_quick_post) for its input syntax.
 
 **Escape** closes. A failed request preserves the text so you can retry. Dismissing quick add also preserves its draft for the next opening; Cancel discards it. These drafts last for the shell session.
 
@@ -165,7 +164,7 @@ For a baseline, set `TODOIST_SOURCE` to a separate copy of the earlier revision
 and `TODOIST_CAPTURE_STAGE=before`. Captures contain synthetic data only.
 
 <details>
-<summary>Before-and-after input and font screenshots</summary>
+<summary>Before-and-after input and settings screenshots</summary>
 
 | View | Before | After |
 | --- | --- | --- |

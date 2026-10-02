@@ -43,8 +43,8 @@ Item {
     property int syncFailures: 0
     property date now: clock.date
     property var widgets: []
-    // Like the display panel, inherit the bar font unless locally overridden.
-    readonly property string fontFamily: preferences.fontFamily || (widgets.length && widgets[0].bar ? widgets[0].bar.fontFamily : Style.font.family)
+    // Match omarchy-hyprmoncfg: inherit the bar font, with the shell fallback.
+    readonly property string fontFamily: widgets.length && widgets[0].bar ? widgets[0].bar.fontFamily : Style.font.family
     readonly property bool configured: token.length > 0
     readonly property var projectMap: Model.byId(projects)
     readonly property var sectionMap: Model.byId(sections)
@@ -94,14 +94,6 @@ Item {
         if (!isFinite(next[key])) return;
         preferences = next;
         if (storageReady) settingsFile.setText(JSON.stringify(preferences));
-    }
-    function setFontFamily(value) {
-        if (typeof value !== "string") return;
-        var next = Object.assign({}, preferences);
-        if (value.trim()) next.fontFamily = value.trim();
-        else delete next.fontFamily;
-        preferences = next;
-        if (storageReady) settingsFile.setText(JSON.stringify(next));
     }
     function cancelRequests() {
         nextSyncRetry = 0;

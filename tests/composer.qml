@@ -8,6 +8,8 @@ import "plugin" as Plugin
 import "plugin/ui" as Tasks
 
 ShellRoot {
+    QtObject { id: fontBar; property string fontFamily: Style.font.family }
+    QtObject { id: fontWidget; property var bar: fontBar }
     Plugin.Service {
         id: service
         enableShortcuts: false
@@ -47,7 +49,7 @@ ShellRoot {
         when: window.visible && Quickshell.env("TODOIST_CAPTURE_ONLY") !== "1"
         function cleanupTestCase() { console.log("COMPOSER UI RESULTS", qtest_results.passCount, "passed", qtest_results.failCount, "failed"); Qt.callLater(Qt.quit); }
         function cleanup() { console.log("TEST", qtest_results.functionName, qtest_results.failed ? "FAILED" : "PASSED"); }
-        function init() { composer.reset(); composer.editingTask = null; composer.submitting = false; composer.visible = true; inlineList.visible = false; inlineList.composerKey = ""; service.captured = []; composer.focusInput(); wait(30); }
+        function init() { service.widgets = [fontWidget]; fontBar.fontFamily = Style.font.family; composer.reset(); composer.editingTask = null; composer.submitting = false; composer.visible = true; inlineList.visible = false; inlineList.composerKey = ""; service.captured = []; composer.focusInput(); wait(30); }
         function enter(text) {
             var input = findChild(composer, "taskName");
             input.text = text; input.cursorPosition = text.length; composer.focusInput(); composer.updateToken(); wait(20);
@@ -127,16 +129,18 @@ ShellRoot {
             card.width = 360;
             enter("A long task name that wraps to another line tomorrow at 4pm p1 #Studio /Website @next");
             var input = findChild(composer, "taskName"); verify(input.contentHeight > input.font.pixelSize * 2);
-            service.setFontFamily("Inter"); wait(30); compare(input.font.family, "Inter");
+            fontBar.fontFamily = "Inter"; wait(30); compare(input.font.family, "Inter");
             verify(composer.highlightSpans.some(function(rect) { return rect.kind === "due" && rect.y > 0; }));
             verify(composer.highlightSpans.every(function(rect) { return rect.width > 0 && rect.x + rect.width <= input.width + 3; }));
             card.width = 560;
         }
-        function test_font_setting_applies_and_restores_default() {
-            var original = service.fontFamily; service.setFontFamily("Inter");
+        function test_fonts_inherit_bar_and_shell_ignoring_old_preferences() {
+            service.preferences = {fontFamily: "monospace"}; fontBar.fontFamily = "Inter";
             compare(composer.fontFamily, "Inter"); compare(findChild(composer, "taskName").font.family, "Inter");
-            compare(settings.fontFamily, "Inter"); compare(findChild(settings, "fontPicker").fontFamily, "Inter");
-            service.setFontFamily(""); compare(composer.fontFamily, original);
+            compare(settings.fontFamily, "Inter"); compare(inlineList.fontFamily, "Inter");
+            verify(findChild(settings, "fontPicker") === null);
+            fontBar.fontFamily = "sans-serif"; compare(composer.fontFamily, "sans-serif"); compare(settings.fontFamily, "sans-serif");
+            service.widgets = []; compare(composer.fontFamily, Style.font.family); compare(settings.fontFamily, Style.font.family);
         }
         function test_light_and_dark_highlight_colors() {
             var original = Color.popups.background;
@@ -182,7 +186,8 @@ ShellRoot {
                 Color.popups.border = scene.theme === "light" ? "#cccccc" : "#555555";
                 Color.foreground = Color.popups.text; Color.background = Color.popups.background;
                 Color.accent = scene.theme === "light" ? "#d1453b" : "#ff5c50";
-                service.preferences = Quickshell.env("TODOIST_CAPTURE_STAGE") === "before" ? {} : {fontFamily: "Inter"};
+                service.widgets = [fontWidget]; fontBar.fontFamily = "Inter";
+                service.preferences = {};
                 card.width = scene.width;
                 composer.reset(); composer.visible = !scene.settings; settings.visible = scene.settings;
                 composer.text = "Review tomorrow at 4pm !!1 #Studio /Website @next !30m {Friday}";

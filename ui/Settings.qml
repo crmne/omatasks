@@ -9,24 +9,6 @@ ColumnLayout {
     readonly property string fontFamily: service.fontFamily
     spacing: Style.space(20)
     ColumnLayout {
-        Layout.fillWidth: true
-        spacing: Style.space(8)
-        Label { text: "Font"; font.family: root.fontFamily; font.bold: true }
-        UI.SearchableDropdown {
-            objectName: "fontPicker"
-            Layout.fillWidth: true
-            showLabel: false
-            placeholderText: "Search installed fonts…"
-            fontFamily: root.fontFamily
-            value: root.service.preferences.fontFamily || ""
-            options: [{value: "", label: "Follow bar font"}, {value: "sans-serif", label: "Sans serif"}].concat(Qt.fontFamilies().filter(function(family) {
-                return family !== "monospace" && family !== "sans-serif";
-            }).map(function(family) { return {value: family, label: family}; }))
-            onChanged: function(value) { root.service.setFontFamily(value); }
-        }
-        Label { Layout.fillWidth: true; text: "Applies to task lists, editors and menus."; font.family: root.fontFamily; font.pixelSize: Style.font.caption; opacity: 0.5; wrapMode: Text.WordWrap; elide: Text.ElideNone }
-    }
-    ColumnLayout {
         visible: root.service.configured
         Layout.fillWidth: true
         spacing: Style.space(8)
