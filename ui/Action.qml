@@ -4,7 +4,7 @@ import qs.Commons
 
 C.AbstractButton {
     id: root
-    property string fontFamily: Style.font.family
+    property string fontFamily: Qt.application.font.family
     property bool selected: false
     property color foreground: Color.popups.text
     property string tip: ""

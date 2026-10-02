@@ -4,7 +4,7 @@ import qs.Commons
 
 C.ToolTip {
     id: root
-    property string fontFamily: Style.font.family
+    property string fontFamily: Qt.application.font.family
     delay: 600
     padding: Style.space(10)
     // ToolTip centers using implicitWidth, so constrain that too; otherwise

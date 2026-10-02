@@ -5,7 +5,7 @@ import "../Model.js" as Model
 
 C.AbstractButton {
     id: root
-    property string fontFamily: Style.font.family
+    property string fontFamily: Qt.application.font.family
     required property var task
     readonly property color priorityColor: ["#999999", "#999999", "#5297ff", "#eb9700", "#ef615b"][task.priority || 1]
     implicitWidth: Style.space(26)

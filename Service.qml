@@ -2,7 +2,6 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
-import qs.Commons
 import "Model.js" as Model
 import "ui/OrderModel.js" as Order
 import "ui/BulkModel.js" as Bulk
@@ -43,8 +42,8 @@ Item {
     property int syncFailures: 0
     property date now: clock.date
     property var widgets: []
-    // Match omarchy-hyprmoncfg: inherit the bar font, with the shell fallback.
-    readonly property string fontFamily: widgets.length && widgets[0].bar ? widgets[0].bar.fontFamily : Style.font.family
+    // The bar uses a terminal font. Task text follows the desktop's UI font.
+    readonly property string fontFamily: Qt.application.font.family
     readonly property bool configured: token.length > 0
     readonly property var projectMap: Model.byId(projects)
     readonly property var sectionMap: Model.byId(sections)

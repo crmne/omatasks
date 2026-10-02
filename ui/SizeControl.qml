@@ -12,7 +12,7 @@ C.SpinBox {
     rightPadding: up.indicator.width + Style.space(4)
     topPadding: 0
     bottomPadding: 0
-    font.family: Style.font.family
+    font.family: Qt.application.font.family
     font.pixelSize: Style.font.bodySmall
 
     contentItem: TextInput {

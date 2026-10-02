@@ -10,6 +10,9 @@ import "plugin/ui" as Tasks
 ShellRoot {
     QtObject { id: fontBar; property string fontFamily: Style.font.family }
     QtObject { id: fontWidget; property var bar: fontBar }
+    Tasks.Label { id: nativeLabel; visible: false }
+    TextMetrics { id: narrowGlyphs; font.family: service.fontFamily; font.pixelSize: 14; text: "iiiiiiii" }
+    TextMetrics { id: wideGlyphs; font: narrowGlyphs.font; text: "WWWWWWWW" }
     Plugin.Service {
         id: service
         enableShortcuts: false
@@ -120,27 +123,31 @@ ShellRoot {
             var row = inlineList.rows.filter(function(r) { return r.kind === "add"; })[0]; verify(row !== undefined);
             inlineList.addAt(row.key, row.projectId); wait(80);
             var input = findChild(inlineList, "taskName"); verify(input !== null);
+            compare(input.font.family, Qt.application.font.family);
             input.text = "Review tomorrow !!1 #Studio @next"; input.cursorPosition = input.length; wait(30);
             compare(findChild(inlineList, "dateChip").text, "tomorrow"); compare(findChild(inlineList, "priorityChip").text, "P1");
             verify(findChild(inlineList, "highlight_due") !== null);
             keyClick(Qt.Key_Escape); keyClick(Qt.Key_Return); compare(service.captured.length, 1); compare(service.captured[0].text, "Review tomorrow !!1 #Studio @next");
         }
-        function test_title_wraps_and_highlight_positions_follow_font_changes() {
+        function test_title_wraps_and_highlight_positions_follow_font_size() {
             card.width = 360;
             enter("A long task name that wraps to another line tomorrow at 4pm p1 #Studio /Website @next");
             var input = findChild(composer, "taskName"); verify(input.contentHeight > input.font.pixelSize * 2);
-            fontBar.fontFamily = "Inter"; wait(30); compare(input.font.family, "Inter");
+            input.font.pixelSize = Style.font.body + 2; wait(30);
             verify(composer.highlightSpans.some(function(rect) { return rect.kind === "due" && rect.y > 0; }));
             verify(composer.highlightSpans.every(function(rect) { return rect.width > 0 && rect.x + rect.width <= input.width + 3; }));
+            input.font.pixelSize = Qt.binding(function() { return Style.font.body; });
             card.width = 560;
         }
-        function test_fonts_inherit_bar_and_shell_ignoring_old_preferences() {
-            service.preferences = {fontFamily: "monospace"}; fontBar.fontFamily = "Inter";
-            compare(composer.fontFamily, "Inter"); compare(findChild(composer, "taskName").font.family, "Inter");
-            compare(settings.fontFamily, "Inter"); compare(inlineList.fontFamily, "Inter");
+        function test_desktop_ui_font_is_used_even_with_a_monospace_bar() {
+            service.preferences = {fontFamily: "monospace"}; fontBar.fontFamily = "monospace";
+            var family = Qt.application.font.family;
+            compare(composer.fontFamily, family); compare(findChild(composer, "taskName").font.family, family);
+            compare(settings.fontFamily, family); compare(inlineList.fontFamily, family); compare(nativeLabel.font.family, family);
+            verify(wideGlyphs.advanceWidth > narrowGlyphs.advanceWidth * 2, "UI glyph widths must be proportional");
             verify(findChild(settings, "fontPicker") === null);
-            fontBar.fontFamily = "sans-serif"; compare(composer.fontFamily, "sans-serif"); compare(settings.fontFamily, "sans-serif");
-            service.widgets = []; compare(composer.fontFamily, Style.font.family); compare(settings.fontFamily, Style.font.family);
+            fontBar.fontFamily = "Inter"; compare(composer.fontFamily, family); compare(settings.fontFamily, family);
+            service.widgets = []; compare(composer.fontFamily, family); compare(settings.fontFamily, family);
         }
         function test_light_and_dark_highlight_colors() {
             var original = Color.popups.background;
@@ -186,7 +193,8 @@ ShellRoot {
                 Color.popups.border = scene.theme === "light" ? "#cccccc" : "#555555";
                 Color.foreground = Color.popups.text; Color.background = Color.popups.background;
                 Color.accent = scene.theme === "light" ? "#d1453b" : "#ff5c50";
-                service.widgets = [fontWidget]; fontBar.fontFamily = "Inter";
+                // Use the real bar default; a fake proportional bar font hides regressions.
+                service.widgets = [fontWidget]; fontBar.fontFamily = Style.font.family;
                 service.preferences = {};
                 card.width = scene.width;
                 composer.reset(); composer.visible = !scene.settings; settings.visible = scene.settings;

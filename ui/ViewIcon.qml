@@ -50,7 +50,7 @@ Item {
         y: parent.height * 0.39
         text: root.day
         color: root.color
-        font.family: Style.font.family
+        font.family: Qt.application.font.family
         font.pixelSize: root.height * 0.43
         font.bold: true
     }

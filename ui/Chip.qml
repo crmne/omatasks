@@ -3,7 +3,7 @@ import qs.Commons
 
 Item {
     id: root
-    property string fontFamily: Style.font.family
+    property string fontFamily: Qt.application.font.family
     property string text: ""
     property string iconName: ""
     property color foreground: Color.popups.text
