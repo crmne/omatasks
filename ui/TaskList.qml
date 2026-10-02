@@ -9,6 +9,7 @@ import "BulkModel.js" as Bulk
 FocusScope {
     id: root
     required property var service
+    readonly property string fontFamily: service.fontFamily
     property string view: "today"
     property bool settingsOpen: false
     property string composerKey: ""
@@ -126,7 +127,7 @@ FocusScope {
         height: Style.space(28); spacing: Style.space(4)
         Repeater {
             model: [{id: "today", title: "Today"}, {id: "inbox", title: "Inbox"}, {id: "upcoming", title: "Upcoming"}]
-            Action {
+            Action { fontFamily: root.fontFamily;
                 required property var modelData
                 Layout.fillWidth: true
                 Layout.preferredWidth: 0
@@ -139,8 +140,8 @@ FocusScope {
                 onClicked: { root.view = modelData.id; root.settingsOpen = false; }
             }
         }
-        Action { id: displayButton; objectName: "displayButton"; iconName: "display"; iconSize: Style.space(17); tip: "Display"; selected: display.opened; enabled: root.service.configured; onClicked: display.opened ? display.close() : display.open() }
-        Action { iconName: "settings"; iconSize: Style.space(17); tip: "Settings"; selected: root.settingsOpen; onClicked: root.settingsOpen = !root.settingsOpen }
+        Action { fontFamily: root.fontFamily; id: displayButton; objectName: "displayButton"; iconName: "display"; iconSize: Style.space(17); tip: "Display"; selected: display.opened; enabled: root.service.configured; onClicked: display.opened ? display.close() : display.open() }
+        Action { fontFamily: root.fontFamily; iconName: "settings"; iconSize: Style.space(17); tip: "Settings"; selected: root.settingsOpen; onClicked: root.settingsOpen = !root.settingsOpen }
     }
     ColumnLayout {
         id: status
@@ -149,7 +150,7 @@ FocusScope {
         height: visible ? implicitHeight + Style.space(8) : 0
         visible: statusText.text !== ""
         spacing: Style.space(4)
-        Label {
+        Label { font.family: root.fontFamily;
             id: statusText
             Layout.fillWidth: true
             text: root.service.error || (!root.service.loaded && root.service.configured ? "Loading tasks…" : "")
@@ -157,7 +158,7 @@ FocusScope {
             wrapMode: Text.WordWrap; elide: Text.ElideNone
             font.pixelSize: Style.font.bodySmall
         }
-        Action {
+        Action { fontFamily: root.fontFamily;
             objectName: "retrySync"
             visible: root.service.configured && root.service.error !== ""
             text: root.service.loading ? "Retrying…" : "Retry now"
@@ -171,15 +172,15 @@ FocusScope {
         width: parent.width
         height: visible ? Style.space(34) : 0
         visible: root.selectedIds.length > 0 && !root.setupVisible
-        Label { Layout.fillWidth: true; text: root.selectedIds.length + " selected"; color: Color.accent; font.pixelSize: Style.font.bodySmall }
-        Action {
+        Label { font.family: root.fontFamily; Layout.fillWidth: true; text: root.selectedIds.length + " selected"; color: Color.accent; font.pixelSize: Style.font.bodySmall }
+        Action { fontFamily: root.fontFamily;
             text: "Actions…"; objectName: "selectionActions"; enabled: !root.service.saving
             onClicked: {
                 var task = root.service.tasks.find(function(t) { return String(t.id) === root.selectedIds[0]; });
                 if (task) root.openTaskMenu(task, mapToItem(root, 0, height));
             }
         }
-        Action { text: "Clear"; enabled: !root.service.saving; onClicked: root.clearSelection() }
+        Action { fontFamily: root.fontFamily; text: "Clear"; enabled: !root.service.saving; onClicked: root.clearSelection() }
     }
     C.ScrollView {
         visible: root.setupVisible
@@ -203,7 +204,7 @@ FocusScope {
         spacing: 0
         cacheBuffer: Style.space(1000)
         C.ScrollBar.vertical: C.ScrollBar { policy: list.contentHeight > list.height ? C.ScrollBar.AsNeeded : C.ScrollBar.AlwaysOff }
-        header: Label {
+        header: Label { font.family: root.fontFamily;
             width: list.width
             height: visible ? Style.space(60) : 0
             visible: root.service.loaded && !root.rows.some(function(row) { return row.kind === "task"; })
@@ -222,7 +223,7 @@ FocusScope {
                 id: groupComponent
                 Item {
                     implicitHeight: Style.space(40)
-                    Label { anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.bottomMargin: Style.space(9); text: rowLoader.modelData.title; font.bold: true; color: text === "Overdue" ? "#ef615b" : Color.popups.text }
+                    Label { font.family: root.fontFamily; anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.bottomMargin: Style.space(9); text: rowLoader.modelData.title; font.bold: true; color: text === "Overdue" ? "#ef615b" : Color.popups.text }
                     Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Color.popups.text; opacity: 0.12 }
                 }
             }
@@ -248,7 +249,7 @@ FocusScope {
                 id: addComponent
                 Item {
                     implicitHeight: root.composerKey === rowLoader.modelData.key ? composerLoader.implicitHeight + Style.space(20) : Style.space(40)
-                    Action {
+                    Action { fontFamily: root.fontFamily;
                         visible: root.composerKey !== rowLoader.modelData.key
                         y: Style.space(5)
                         text: "+   Add task"
@@ -298,7 +299,7 @@ FocusScope {
         width: root.width - x; height: dragLabel.implicitHeight + Style.space(16)
         color: Color.popups.background; border.color: Color.popups.border
         radius: Style.cornerRadius; opacity: 0.95; z: 3
-        Label {
+        Label { font.family: root.fontFamily;
             id: dragLabel
             anchors.centerIn: parent; width: parent.width - Style.space(20)
             text: root.dragging ? Model.plain(root.rows[root.dragIndex].task.content) : ""

@@ -10,6 +10,7 @@ import "EditModel.js" as Edit
 ColumnLayout {
     id: root
     required property var service
+    readonly property string fontFamily: service.fontFamily
     property var editingTask: null
     property var originalTask: null
     property var pendingCommands: []
@@ -167,7 +168,7 @@ ColumnLayout {
         Layout.fillWidth: true
         implicitHeight: Style.space(30)
         padding: 0; color: Color.popups.text
-        font.family: Style.font.family; font.pixelSize: Style.font.body; font.bold: true
+        font.family: root.fontFamily; font.pixelSize: Style.font.body; font.bold: true
         placeholderText: "Task name"; placeholderTextColor: Qt.rgba(Color.popups.text.r, Color.popups.text.g, Color.popups.text.b, 0.4)
         selectionColor: Color.accent; selectedTextColor: Color.popups.background
         background: Item {}
@@ -190,7 +191,7 @@ ColumnLayout {
             objectName: "taskDescription"
             padding: 0; wrapMode: TextEdit.Wrap
             color: Color.popups.text
-            font.family: Style.font.family; font.pixelSize: Style.font.bodySmall
+            font.family: root.fontFamily; font.pixelSize: Style.font.bodySmall
             placeholderText: "Description"; placeholderTextColor: Qt.rgba(Color.popups.text.r, Color.popups.text.g, Color.popups.text.b, 0.4)
             background: Item {}
             enabled: !root.submitting
@@ -200,33 +201,33 @@ ColumnLayout {
             }
         }
     }
-    Action { visible: !root.descriptionVisible; text: "Description"; implicitHeight: Style.space(22); onClicked: { root.descriptionVisible = true; description.forceActiveFocus(); } }
+    Action { fontFamily: root.fontFamily; visible: !root.descriptionVisible; text: "Description"; implicitHeight: Style.space(22); onClicked: { root.descriptionVisible = true; description.forceActiveFocus(); } }
 
     Flow {
         Layout.fillWidth: true
         spacing: Style.space(6)
         enabled: !root.submitting
-        Chip { text: root.shownDate || "Date"; iconName: "today"; removable: root.shownDate !== ""; maximumWidth: Math.min(root.width, Style.space(230)); onClicked: root.openPicker("due"); onRemoved: root.setDate("") }
-        Chip { text: root.priority ? "P" + root.priority : "Priority"; iconName: "flag"; foreground: root.priority > 0 && root.priority < 4 ? ["#ef615b", "#e49b40", "#5295e4"][root.priority - 1] : Color.popups.text; removable: root.priority > 0; onClicked: root.openPicker("priority"); onRemoved: root.priority = 0 }
-        Chip { visible: root.deadline !== ""; text: root.deadline; iconName: "upcoming"; removable: true; onClicked: root.openPicker("deadline"); onRemoved: root.deadline = "" }
-        Chip { visible: root.reminder !== ""; text: root.reminder; iconName: "bell"; removable: true; onClicked: root.openPicker("reminder"); onRemoved: root.reminder = "" }
-        Chip { visible: root.section !== null; text: root.section ? "/ " + root.section.name : ""; removable: true; maximumWidth: root.width; onClicked: root.openPicker("section"); onRemoved: root.section = null }
-        Chip { visible: root.assignee !== null; text: root.assignee ? "+ " + root.assignee.name : ""; removable: true; maximumWidth: root.width; onClicked: root.openPicker("assignee"); onRemoved: root.assignee = null }
+        Chip { fontFamily: root.fontFamily; text: root.shownDate || "Date"; iconName: "today"; removable: root.shownDate !== ""; maximumWidth: Math.min(root.width, Style.space(230)); onClicked: root.openPicker("due"); onRemoved: root.setDate("") }
+        Chip { fontFamily: root.fontFamily; text: root.priority ? "P" + root.priority : "Priority"; iconName: "flag"; foreground: root.priority > 0 && root.priority < 4 ? ["#ef615b", "#e49b40", "#5295e4"][root.priority - 1] : Color.popups.text; removable: root.priority > 0; onClicked: root.openPicker("priority"); onRemoved: root.priority = 0 }
+        Chip { fontFamily: root.fontFamily; visible: root.deadline !== ""; text: root.deadline; iconName: "upcoming"; removable: true; onClicked: root.openPicker("deadline"); onRemoved: root.deadline = "" }
+        Chip { fontFamily: root.fontFamily; visible: root.reminder !== ""; text: root.reminder; iconName: "bell"; removable: true; onClicked: root.openPicker("reminder"); onRemoved: root.reminder = "" }
+        Chip { fontFamily: root.fontFamily; visible: root.section !== null; text: root.section ? "/ " + root.section.name : ""; removable: true; maximumWidth: root.width; onClicked: root.openPicker("section"); onRemoved: root.section = null }
+        Chip { fontFamily: root.fontFamily; visible: root.assignee !== null; text: root.assignee ? "+ " + root.assignee.name : ""; removable: true; maximumWidth: root.width; onClicked: root.openPicker("assignee"); onRemoved: root.assignee = null }
         Repeater {
             model: root.taskLabels
-            Chip { required property string modelData; text: modelData; iconName: "label"; removable: true; maximumWidth: root.width; onClicked: root.openPicker("label"); onRemoved: root.taskLabels = root.taskLabels.filter(function(l) { return l !== modelData; }) }
+            Chip { fontFamily: root.fontFamily; required property string modelData; text: modelData; iconName: "label"; removable: true; maximumWidth: root.width; onClicked: root.openPicker("label"); onRemoved: root.taskLabels = root.taskLabels.filter(function(l) { return l !== modelData; }) }
         }
-        Action { iconName: "label"; tip: "Labels (@)"; onClicked: root.openPicker("label") }
-        Action { iconName: "more"; tip: "More task options"; selected: more.visible; onClicked: more.visible = !more.visible }
+        Action { fontFamily: root.fontFamily; iconName: "label"; tip: "Labels (@)"; onClicked: root.openPicker("label") }
+        Action { fontFamily: root.fontFamily; iconName: "more"; tip: "More task options"; selected: more.visible; onClicked: more.visible = !more.visible }
     }
     Flow {
         id: more
         visible: false
         Layout.fillWidth: true; spacing: Style.space(6)
-        Action { text: "Reminder"; iconName: "bell"; onClicked: { more.visible = false; root.replacingReminder = ""; root.openPicker("reminder"); } }
-        Action { text: "Deadline"; iconName: "upcoming"; onClicked: { more.visible = false; root.openPicker("deadline"); } }
-        Action { text: "Section"; enabled: root.project !== null; onClicked: { more.visible = false; root.openPicker("section"); } }
-        Action { text: "Assignee"; enabled: root.project !== null && root.project.is_shared === true; onClicked: { more.visible = false; root.openPicker("assignee"); } }
+        Action { fontFamily: root.fontFamily; text: "Reminder"; iconName: "bell"; onClicked: { more.visible = false; root.replacingReminder = ""; root.openPicker("reminder"); } }
+        Action { fontFamily: root.fontFamily; text: "Deadline"; iconName: "upcoming"; onClicked: { more.visible = false; root.openPicker("deadline"); } }
+        Action { fontFamily: root.fontFamily; text: "Section"; enabled: root.project !== null; onClicked: { more.visible = false; root.openPicker("section"); } }
+        Action { fontFamily: root.fontFamily; text: "Assignee"; enabled: root.project !== null && root.project.is_shared === true; onClicked: { more.visible = false; root.openPicker("assignee"); } }
     }
     ColumnLayout {
         visible: root.editing
@@ -234,14 +235,14 @@ ColumnLayout {
         spacing: Style.space(8)
         RowLayout {
             Layout.fillWidth: true
-            Label { text: "Duration"; Layout.fillWidth: true }
-            UI.TextField { objectName: "taskDuration"; Layout.preferredWidth: Style.space(60); text: root.duration; validator: IntValidator { bottom: 0; top: 100000 } onTextEdited: root.duration = text; enabled: !root.submitting }
-            UI.Dropdown { Layout.preferredWidth: Style.space(95); showLabel: false; value: root.durationUnit; options: [{value: "minute", label: "Minutes"}, {value: "day", label: "Days"}]; onChanged: function(value) { root.durationUnit = value; } enabled: !root.submitting }
+            Label { font.family: root.fontFamily; text: "Duration"; Layout.fillWidth: true }
+            UI.TextField { font.family: root.fontFamily; objectName: "taskDuration"; Layout.preferredWidth: Style.space(60); text: root.duration; validator: IntValidator { bottom: 0; top: 100000 } onTextEdited: root.duration = text; enabled: !root.submitting }
+            UI.Dropdown { fontFamily: root.fontFamily; Layout.preferredWidth: Style.space(95); showLabel: false; value: root.durationUnit; options: [{value: "minute", label: "Minutes"}, {value: "day", label: "Days"}]; onChanged: function(value) { root.durationUnit = value; } enabled: !root.submitting }
         }
-        Label { text: "0 = no duration"; opacity: 0.45; font.pixelSize: Style.font.caption }
+        Label { font.family: root.fontFamily; text: "0 = no duration"; opacity: 0.45; font.pixelSize: Style.font.caption }
         Repeater {
             model: root.existingReminders
-            Chip { required property var modelData; text: Edit.reminderText(modelData); iconName: "bell"; maximumWidth: root.width; removable: !modelData.notify_uid || String(modelData.notify_uid) === String(root.service.user.id); enabled: !root.submitting; onClicked: if (removable) { root.replacingReminder = String(modelData.id); root.openPicker("reminder"); } onRemoved: root.removedReminders = root.removedReminders.concat([String(modelData.id)]) }
+            Chip { fontFamily: root.fontFamily; required property var modelData; text: Edit.reminderText(modelData); iconName: "bell"; maximumWidth: root.width; removable: !modelData.notify_uid || String(modelData.notify_uid) === String(root.service.user.id); enabled: !root.submitting; onClicked: if (removable) { root.replacingReminder = String(modelData.id); root.openPicker("reminder"); } onRemoved: root.removedReminders = root.removedReminders.concat([String(modelData.id)]) }
         }
     }
 
@@ -257,10 +258,10 @@ ColumnLayout {
             spacing: Style.space(6)
             RowLayout {
                 Layout.fillWidth: true
-                Label { Layout.fillWidth: true; text: ({project: "Project", label: "Labels", section: "Section", priority: "Priority", due: "Date", deadline: "Deadline", reminder: "Reminder", assignee: "Assignee"})[root.pickerKind] || ""; font.bold: true; font.pixelSize: Style.font.bodySmall }
-                Action { iconName: "close"; iconSize: Style.space(12); tip: "Close picker"; onClicked: { root.closePicker(); root.focusInput(); } }
+                Label { font.family: root.fontFamily; Layout.fillWidth: true; text: ({project: "Project", label: "Labels", section: "Section", priority: "Priority", due: "Date", deadline: "Deadline", reminder: "Reminder", assignee: "Assignee"})[root.pickerKind] || ""; font.bold: true; font.pixelSize: Style.font.bodySmall }
+                Action { fontFamily: root.fontFamily; iconName: "close"; iconSize: Style.space(12); tip: "Close picker"; onClicked: { root.closePicker(); root.focusInput(); } }
             }
-            UI.TextField {
+            UI.TextField { font.family: root.fontFamily;
                 id: search
                 objectName: "pickerSearch"
                 visible: !root.activeToken
@@ -287,27 +288,27 @@ ColumnLayout {
                     contentItem: RowLayout {
                         spacing: Style.space(8)
                         ViewIcon { visible: !!option.modelData.icon; name: option.modelData.icon || ""; color: option.modelData.color || Color.popups.text }
-                        Label { visible: !!option.modelData.prefix; text: option.modelData.prefix || ""; opacity: 0.6 }
-                        Label { Layout.fillWidth: true; text: option.modelData.label; font.pixelSize: Style.font.bodySmall }
-                        Label { Layout.maximumWidth: parent.width * 0.35; text: option.modelData.detail || ""; opacity: 0.4; font.pixelSize: Style.font.caption }
+                        Label { font.family: root.fontFamily; visible: !!option.modelData.prefix; text: option.modelData.prefix || ""; opacity: 0.6 }
+                        Label { font.family: root.fontFamily; Layout.fillWidth: true; text: option.modelData.label; font.pixelSize: Style.font.bodySmall }
+                        Label { font.family: root.fontFamily; Layout.maximumWidth: parent.width * 0.35; text: option.modelData.detail || ""; opacity: 0.4; font.pixelSize: Style.font.caption }
                     }
                     background: Rectangle { radius: Style.cornerRadius; color: option.hovered || root.choiceIndex === option.index ? Style.hoverFillFor(Color.popups.text, Color.accent) : "transparent" }
                     onClicked: root.choose(modelData)
                 }
             }
-            Label { visible: root.choices.length === 0; Layout.fillWidth: true; text: root.pickerKind === "section" && !root.project ? "Choose a project first." : root.pickerKind === "assignee" && (!root.project || !root.project.is_shared) ? "Choose a shared project first." : "No matches"; opacity: 0.5; wrapMode: Text.WordWrap }
-            Label { visible: root.pickerKind === "reminder"; Layout.fillWidth: true; text: "Before-task reminders need a task time. Availability follows your Todoist plan."; font.pixelSize: Style.font.caption; opacity: 0.5; wrapMode: Text.WordWrap; elide: Text.ElideNone }
+            Label { font.family: root.fontFamily; visible: root.choices.length === 0; Layout.fillWidth: true; text: root.pickerKind === "section" && !root.project ? "Choose a project first." : root.pickerKind === "assignee" && (!root.project || !root.project.is_shared) ? "Choose a shared project first." : "No matches"; opacity: 0.5; wrapMode: Text.WordWrap }
+            Label { font.family: root.fontFamily; visible: root.pickerKind === "reminder"; Layout.fillWidth: true; text: "Before-task reminders need a task time. Availability follows your Todoist plan."; font.pixelSize: Style.font.caption; opacity: 0.5; wrapMode: Text.WordWrap; elide: Text.ElideNone }
         }
     }
     Rectangle { Layout.fillWidth: true; height: 1; color: Color.popups.text; opacity: 0.12 }
     RowLayout {
         Layout.fillWidth: true
         spacing: Style.space(4)
-        Action { Layout.fillWidth: true; Layout.minimumWidth: 0; maximumWidth: root.width; leftAligned: true; text: (root.project && !root.project.inbox_project ? "# " : "") + root.projectName + " ▾"; iconName: !root.project || root.project.inbox_project ? "inbox" : ""; tip: "Project (#)"; enabled: !root.submitting; onClicked: root.openPicker("project") }
-        Action { text: "Cancel"; enabled: !root.submitting; onClicked: { root.reset(); root.cancelled(); } }
-        Action { text: root.submitting ? (root.editing ? "Saving…" : "Adding…") : root.editing ? "Save" : "Add task"; selected: true; enabled: !root.service.saving && input.text.trim().length > 0; onClicked: root.submit() }
+        Action { fontFamily: root.fontFamily; Layout.fillWidth: true; Layout.minimumWidth: 0; maximumWidth: root.width; leftAligned: true; text: (root.project && !root.project.inbox_project ? "# " : "") + root.projectName + " ▾"; iconName: !root.project || root.project.inbox_project ? "inbox" : ""; tip: "Project (#)"; enabled: !root.submitting; onClicked: root.openPicker("project") }
+        Action { fontFamily: root.fontFamily; text: "Cancel"; enabled: !root.submitting; onClicked: { root.reset(); root.cancelled(); } }
+        Action { fontFamily: root.fontFamily; text: root.submitting ? (root.editing ? "Saving…" : "Adding…") : root.editing ? "Save" : "Add task"; selected: true; enabled: !root.service.saving && input.text.trim().length > 0; onClicked: root.submit() }
     }
-    Label { Layout.fillWidth: true; visible: text !== ""; text: root.message; wrapMode: Text.WordWrap; elide: Text.ElideNone; color: Color.urgent }
+    Label { font.family: root.fontFamily; Layout.fillWidth: true; visible: text !== ""; text: root.message; wrapMode: Text.WordWrap; elide: Text.ElideNone; color: Color.urgent }
     Connections {
         target: root.service
         function onTaskAdded() { if (root.submitting) { root.submitting = false; root.reset(); root.finished(); } }

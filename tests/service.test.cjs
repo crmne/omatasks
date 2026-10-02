@@ -43,6 +43,18 @@ function reorderFixture() {
     return fixture;
 }
 const commandsOf = request => JSON.parse(new URLSearchParams(request.body).get('commands'));
+test('Font preferences persist, preserve other settings and can return to the bar default', () => {
+    const {s} = service();
+    const saved = []; s.settingsFile.setText = text => saved.push(JSON.parse(text));
+    s.preferences = {panelWidth: 600, today: {sorting: 'manual'}};
+    s.setFontFamily(' Inter ');
+    assert.equal(s.preferences.fontFamily, 'Inter');
+    assert.equal(saved[0].fontFamily, 'Inter'); assert.equal(saved[0].panelWidth, 600);
+    s.setFontFamily(null); assert.equal(saved.length, 1);
+    s.setFontFamily('');
+    assert.equal(s.preferences.fontFamily, undefined); assert.equal(saved[1].fontFamily, undefined);
+    assert.equal(saved[1].today.sorting, 'manual');
+});
 test('Reordering is optimistic, cancels stale sync, persists day order and switches to Manual', () => {
     const {s, wires} = reorderFixture();
     s.refresh();

@@ -4,6 +4,7 @@ import qs.Commons
 
 C.AbstractButton {
     id: root
+    property string fontFamily: Style.font.family
     property bool selected: false
     property color foreground: Color.popups.text
     property string tip: ""
@@ -31,7 +32,7 @@ C.AbstractButton {
             spacing: Style.space(6)
             opacity: root.enabled ? (root.selected || root.hovered ? 1 : 0.75) : 0.35
             ViewIcon { visible: root.iconName !== ""; name: root.iconName; day: root.iconDay; color: root.foreground; width: root.iconSize; height: width; anchors.verticalCenter: parent.verticalCenter }
-            Label { id: caption; visible: text !== ""; width: Math.min(implicitWidth, Math.max(0, root.width - Style.space(20) - (root.iconName ? root.iconSize + contents.spacing : 0))); text: root.text; color: root.foreground; font.bold: root.bold; font.pixelSize: Style.font.bodySmall; anchors.verticalCenter: parent.verticalCenter }
+            Label { font.family: root.fontFamily; id: caption; visible: text !== ""; width: Math.min(implicitWidth, Math.max(0, root.width - Style.space(20) - (root.iconName ? root.iconSize + contents.spacing : 0))); text: root.text; color: root.foreground; font.bold: root.bold; font.pixelSize: Style.font.bodySmall; anchors.verticalCenter: parent.verticalCenter }
         }
     }
     background: Rectangle {
@@ -40,5 +41,5 @@ C.AbstractButton {
         border.width: root.selected || root.activeFocus || root.bordered ? 1 : 0
         border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, root.bordered ? 0.35 : 0.12)
     }
-    Tip { visible: root.hovered && root.tip !== ""; text: root.tip }
+    Tip { fontFamily: root.fontFamily; visible: root.hovered && root.tip !== ""; text: root.tip }
 }

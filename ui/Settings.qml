@@ -6,23 +6,42 @@ import qs.Ui as UI
 ColumnLayout {
     id: root
     required property var service
+    readonly property string fontFamily: service.fontFamily
     spacing: Style.space(20)
+    ColumnLayout {
+        Layout.fillWidth: true
+        spacing: Style.space(8)
+        Label { text: "Font"; font.family: root.fontFamily; font.bold: true }
+        UI.SearchableDropdown {
+            objectName: "fontPicker"
+            Layout.fillWidth: true
+            showLabel: false
+            placeholderText: "Search installed fonts…"
+            fontFamily: root.fontFamily
+            value: root.service.preferences.fontFamily || ""
+            options: [{value: "", label: "Follow bar font"}, {value: "sans-serif", label: "Sans serif"}].concat(Qt.fontFamilies().filter(function(family) {
+                return family !== "monospace" && family !== "sans-serif";
+            }).map(function(family) { return {value: family, label: family}; }))
+            onChanged: function(value) { root.service.setFontFamily(value); }
+        }
+        Label { Layout.fillWidth: true; text: "Applies to task lists, editors and menus."; font.family: root.fontFamily; font.pixelSize: Style.font.caption; opacity: 0.5; wrapMode: Text.WordWrap; elide: Text.ElideNone }
+    }
     ColumnLayout {
         visible: root.service.configured
         Layout.fillWidth: true
         spacing: Style.space(8)
-        Label { text: "Panel size"; font.bold: true }
+        Label { font.family: root.fontFamily; text: "Panel size"; font.bold: true }
         RowLayout {
             Layout.fillWidth: true
-            Label { Layout.fillWidth: true; text: "Width" }
-            SizeControl { value: root.service.panelWidth; from: 360; to: 1000; Accessible.name: "Panel width"; onValueModified: root.service.setPanelSize("panelWidth", value) }
+            Label { font.family: root.fontFamily; Layout.fillWidth: true; text: "Width" }
+            SizeControl { font.family: root.fontFamily; value: root.service.panelWidth; from: 360; to: 1000; Accessible.name: "Panel width"; onValueModified: root.service.setPanelSize("panelWidth", value) }
         }
         RowLayout {
             Layout.fillWidth: true
-            Label { Layout.fillWidth: true; text: "Maximum height" }
-            SizeControl { value: root.service.panelHeight; from: 280; to: 1200; Accessible.name: "Maximum panel height"; onValueModified: root.service.setPanelSize("panelHeight", value) }
+            Label { font.family: root.fontFamily; Layout.fillWidth: true; text: "Maximum height" }
+            SizeControl { font.family: root.fontFamily; value: root.service.panelHeight; from: 280; to: 1200; Accessible.name: "Maximum panel height"; onValueModified: root.service.setPanelSize("panelHeight", value) }
         }
-        Label { Layout.fillWidth: true; text: "Pixels. The panel shrinks to fit shorter lists."; font.pixelSize: Style.font.caption; opacity: 0.5; wrapMode: Text.WordWrap; elide: Text.ElideNone }
+        Label { font.family: root.fontFamily; Layout.fillWidth: true; text: "Pixels. The panel shrinks to fit shorter lists."; font.pixelSize: Style.font.caption; opacity: 0.5; wrapMode: Text.WordWrap; elide: Text.ElideNone }
     }
     Rectangle { visible: root.service.configured; Layout.fillWidth: true; height: 1; color: Color.popups.text; opacity: 0.12 }
     Setup { Layout.fillWidth: true; service: root.service }
@@ -30,10 +49,10 @@ ColumnLayout {
     ColumnLayout {
         Layout.fillWidth: true
         spacing: Style.space(8)
-        Label { text: "Quick add shortcut"; font.bold: true }
+        Label { font.family: root.fontFamily; text: "Quick add shortcut"; font.bold: true }
         RowLayout {
             Layout.fillWidth: true
-            UI.TextField {
+            UI.TextField { font.family: root.fontFamily;
                 id: shortcutInput
                 Layout.fillWidth: true
                 text: root.service.shortcut.value
@@ -41,10 +60,10 @@ ColumnLayout {
                 enabled: !root.service.shortcut.busy
                 onAccepted: root.service.shortcut.apply(text, true)
             }
-            Action { text: "Apply"; bordered: true; enabled: !root.service.shortcut.busy; onClicked: root.service.shortcut.apply(shortcutInput.text, true) }
+            Action { fontFamily: root.fontFamily; text: "Apply"; bordered: true; enabled: !root.service.shortcut.busy; onClicked: root.service.shortcut.apply(shortcutInput.text, true) }
         }
-        Label { Layout.fillWidth: true; text: "Super, Ctrl, Alt, Shift + a key. Leave empty to disable."; wrapMode: Text.WordWrap; elide: Text.ElideNone; opacity: 0.5; font.pixelSize: Style.font.caption }
-        Label {
+        Label { font.family: root.fontFamily; Layout.fillWidth: true; text: "Super, Ctrl, Alt, Shift + a key. Leave empty to disable."; wrapMode: Text.WordWrap; elide: Text.ElideNone; opacity: 0.5; font.pixelSize: Style.font.caption }
+        Label { font.family: root.fontFamily;
             Layout.fillWidth: true
             visible: text !== ""
             text: root.service.shortcut.message

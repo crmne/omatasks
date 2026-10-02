@@ -4,6 +4,7 @@ import qs.Commons
 
 C.ToolTip {
     id: root
+    property string fontFamily: Style.font.family
     delay: 600
     padding: Style.space(10)
     // ToolTip centers using implicitWidth, so constrain that too; otherwise
@@ -16,7 +17,7 @@ C.ToolTip {
         id: preview
         text: root.text; textFormat: Text.PlainText
         color: Color.tooltip.text
-        font.family: Style.font.family; font.pixelSize: Style.font.bodySmall
+        font.family: root.fontFamily; font.pixelSize: Style.font.bodySmall
         wrapMode: Text.Wrap; maximumLineCount: 8; elide: Text.ElideRight
     }
 }

@@ -37,13 +37,13 @@ C.SpinBox {
         width: Style.space(36); height: root.height
         radius: Style.cornerRadius
         color: root.down.pressed || root.down.hovered ? Style.hoverFillFor(Color.popups.text, Color.accent) : Qt.rgba(Color.popups.text.r, Color.popups.text.g, Color.popups.text.b, 0.05)
-        Label { anchors.centerIn: parent; text: "−"; font.pixelSize: Style.space(20); opacity: root.value > root.from ? 1 : 0.3 }
+        Label { font.family: root.font.family; anchors.centerIn: parent; text: "−"; font.pixelSize: Style.space(20); opacity: root.value > root.from ? 1 : 0.3 }
     }
     up.indicator: Rectangle {
         x: root.width - width
         width: Style.space(36); height: root.height
         radius: Style.cornerRadius
         color: root.up.pressed || root.up.hovered ? Style.hoverFillFor(Color.popups.text, Color.accent) : Qt.rgba(Color.popups.text.r, Color.popups.text.g, Color.popups.text.b, 0.05)
-        Label { anchors.centerIn: parent; text: "+"; font.pixelSize: Style.space(20); opacity: root.value < root.to ? 1 : 0.3 }
+        Label { font.family: root.font.family; anchors.centerIn: parent; text: "+"; font.pixelSize: Style.space(20); opacity: root.value < root.to ? 1 : 0.3 }
     }
 }

@@ -9,6 +9,7 @@ import "../Model.js" as Model
 C.Popup {
     id: root
     required property var service
+    readonly property string fontFamily: service.fontFamily
     property var tasks: []
     property string page: "main"
     property string message: ""
@@ -51,13 +52,13 @@ C.Popup {
             spacing: Style.space(5)
             RowLayout {
                 Layout.fillWidth: true
-                Action { visible: root.page !== "main"; text: "‹"; tip: "Back"; enabled: !root.busy; onClicked: root.page = "main" }
-                Label { Layout.fillWidth: true; text: root.tasks.length === 1 ? "1 task selected" : root.tasks.length + " tasks selected"; font.bold: true }
-                Action { text: "×"; tip: "Close menu"; enabled: !root.busy; onClicked: root.close() }
+                Action { fontFamily: root.fontFamily; visible: root.page !== "main"; text: "‹"; tip: "Back"; enabled: !root.busy; onClicked: root.page = "main" }
+                Label { font.family: root.fontFamily; Layout.fillWidth: true; text: root.tasks.length === 1 ? "1 task selected" : root.tasks.length + " tasks selected"; font.bold: true }
+                Action { fontFamily: root.fontFamily; text: "×"; tip: "Close menu"; enabled: !root.busy; onClicked: root.close() }
             }
-            Label { visible: root.busy; text: "Saving changes…"; opacity: 0.6 }
-            Label { visible: text !== ""; text: root.message; color: Color.urgent; Layout.fillWidth: true; wrapMode: Text.Wrap; elide: Text.ElideNone }
-            Action {
+            Label { font.family: root.fontFamily; visible: root.busy; text: "Saving changes…"; opacity: 0.6 }
+            Label { font.family: root.fontFamily; visible: text !== ""; text: root.message; color: Color.urgent; Layout.fillWidth: true; wrapMode: Text.Wrap; elide: Text.ElideNone }
+            Action { fontFamily: root.fontFamily;
                 visible: root.canRetry && !!root.service.bulkRetry
                 text: "Retry remaining changes"; enabled: !root.busy
                 onClicked: { root.pending = true; root.message = ""; if (!root.service.retryTaskAction()) { root.pending = false; root.message = root.service.error || "Please wait before retrying."; } }
@@ -67,10 +68,10 @@ C.Popup {
                 enabled: !root.busy
                 Layout.fillWidth: true
                 spacing: Style.space(5)
-                Action { visible: root.tasks.length === 1; text: "Edit"; leftAligned: true; Layout.fillWidth: true; onClicked: { var task = root.tasks[0]; root.close(); root.editRequested(task); } }
-                Action { text: "✓   Complete"; objectName: "bulkComplete"; leftAligned: true; Layout.fillWidth: true; onClicked: root.run("complete", null) }
+                Action { fontFamily: root.fontFamily; visible: root.tasks.length === 1; text: "Edit"; leftAligned: true; Layout.fillWidth: true; onClicked: { var task = root.tasks[0]; root.close(); root.editRequested(task); } }
+                Action { fontFamily: root.fontFamily; text: "✓   Complete"; objectName: "bulkComplete"; leftAligned: true; Layout.fillWidth: true; onClicked: root.run("complete", null) }
                 Rectangle { Layout.fillWidth: true; height: 1; color: Color.popups.text; opacity: 0.12 }
-                Label { text: "Date"; font.bold: true; Layout.topMargin: Style.space(4) }
+                Label { font.family: root.fontFamily; text: "Date"; font.bold: true; Layout.topMargin: Style.space(4) }
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: Style.space(2)
@@ -83,7 +84,7 @@ C.Popup {
                             {value: "", text: "∅", tip: "Remove date", color: Color.popups.text},
                             {value: "custom", text: "…", tip: "Choose date or recurrence", color: Color.popups.text}
                         ]
-                        Action {
+                        Action { fontFamily: root.fontFamily;
                             required property var modelData
                             Layout.fillWidth: true; Layout.preferredWidth: 0
                             text: modelData.text; tip: modelData.tip; foreground: modelData.color
@@ -92,12 +93,12 @@ C.Popup {
                         }
                     }
                 }
-                Label { text: "Priority"; font.bold: true; Layout.topMargin: Style.space(4) }
+                Label { font.family: root.fontFamily; text: "Priority"; font.bold: true; Layout.topMargin: Style.space(4) }
                 RowLayout {
                     Layout.fillWidth: true
                     Repeater {
                         model: [4, 3, 2, 1]
-                        Action {
+                        Action { fontFamily: root.fontFamily;
                             required property int modelData
                             Layout.fillWidth: true; text: "⚑ P" + (5 - modelData)
                             objectName: "bulkPriority_" + modelData
@@ -108,39 +109,39 @@ C.Popup {
                     }
                 }
                 Rectangle { Layout.fillWidth: true; height: 1; color: Color.popups.text; opacity: 0.12; Layout.topMargin: Style.space(4) }
-                Action { text: "⚑   Deadline…"; leftAligned: true; Layout.fillWidth: true; onClicked: root.showPage("deadline") }
-                Action { text: "◷   Add reminder…"; leftAligned: true; Layout.fillWidth: true; onClicked: root.showPage("reminder") }
-                Action { text: "Move to…"; objectName: "bulkMove"; leftAligned: true; Layout.fillWidth: true; onClicked: root.showPage("move") }
-                Action { text: "Duplicate"; objectName: "bulkDuplicate"; leftAligned: true; Layout.fillWidth: true; tip: "Copy tasks and subtasks, without comments or reminders"; onClicked: root.run("duplicate", null) }
-                Action {
+                Action { fontFamily: root.fontFamily; text: "⚑   Deadline…"; leftAligned: true; Layout.fillWidth: true; onClicked: root.showPage("deadline") }
+                Action { fontFamily: root.fontFamily; text: "◷   Add reminder…"; leftAligned: true; Layout.fillWidth: true; onClicked: root.showPage("reminder") }
+                Action { fontFamily: root.fontFamily; text: "Move to…"; objectName: "bulkMove"; leftAligned: true; Layout.fillWidth: true; onClicked: root.showPage("move") }
+                Action { fontFamily: root.fontFamily; text: "Duplicate"; objectName: "bulkDuplicate"; leftAligned: true; Layout.fillWidth: true; tip: "Copy tasks and subtasks, without comments or reminders"; onClicked: root.run("duplicate", null) }
+                Action { fontFamily: root.fontFamily;
                     text: root.tasks.length === 1 ? "Copy link to task" : "Copy task links"
                     leftAligned: true; Layout.fillWidth: true
                     onClicked: { Quickshell.clipboardText = root.tasks.map(function(t) { return "https://app.todoist.com/app/task/" + encodeURIComponent(t.id); }).join("\n"); root.close(); }
                 }
                 Rectangle { Layout.fillWidth: true; height: 1; color: Color.popups.text; opacity: 0.12 }
-                Action { text: "Delete…"; objectName: "bulkDelete"; foreground: Color.urgent; leftAligned: true; Layout.fillWidth: true; onClicked: root.showPage("delete") }
+                Action { fontFamily: root.fontFamily; text: "Delete…"; objectName: "bulkDelete"; foreground: Color.urgent; leftAligned: true; Layout.fillWidth: true; onClicked: root.showPage("delete") }
             }
             ColumnLayout {
                 visible: ["customDate", "deadline", "reminder"].indexOf(root.page) >= 0
                 enabled: !root.busy
                 Layout.fillWidth: true
-                Label { text: root.page === "customDate" ? "Date or recurrence" : root.page === "deadline" ? "Deadline" : "Add reminder"; font.bold: true }
-                UI.TextField {
+                Label { font.family: root.fontFamily; text: root.page === "customDate" ? "Date or recurrence" : root.page === "deadline" ? "Deadline" : "Add reminder"; font.bold: true }
+                UI.TextField { font.family: root.fontFamily;
                     id: input
                     objectName: "bulkDateInput"
                     Layout.fillWidth: true
                     placeholderText: root.page === "deadline" ? "YYYY-MM-DD or Tomorrow" : root.page === "reminder" ? "Tomorrow at 9am or 30mb" : "Friday at 10am or every Monday"
                     onAccepted: root.submitInput()
                 }
-                Action { text: "Apply to " + root.tasks.length + (root.tasks.length === 1 ? " task" : " tasks"); enabled: input.text.trim() !== ""; objectName: "bulkApplyInput"; onClicked: root.submitInput() }
-                Action { visible: root.page === "deadline"; text: "Remove deadline"; onClicked: root.run("deadline", "") }
+                Action { fontFamily: root.fontFamily; text: "Apply to " + root.tasks.length + (root.tasks.length === 1 ? " task" : " tasks"); enabled: input.text.trim() !== ""; objectName: "bulkApplyInput"; onClicked: root.submitInput() }
+                Action { fontFamily: root.fontFamily; visible: root.page === "deadline"; text: "Remove deadline"; onClicked: root.run("deadline", "") }
             }
             ColumnLayout {
                 visible: root.page === "move"
                 enabled: !root.busy
                 Layout.fillWidth: true
-                Label { text: "Move to project or section"; font.bold: true }
-                UI.TextField { id: search; Layout.fillWidth: true; placeholderText: "Find a project or section…" }
+                Label { font.family: root.fontFamily; text: "Move to project or section"; font.bold: true }
+                UI.TextField { font.family: root.fontFamily; id: search; Layout.fillWidth: true; placeholderText: "Find a project or section…" }
                 Repeater {
                     model: {
                         var destinations = [];
@@ -152,17 +153,17 @@ C.Popup {
                         });
                         return destinations.filter(function(d) { return d.text.toLowerCase().indexOf(search.text.toLowerCase()) >= 0; });
                     }
-                    Action { required property var modelData; text: modelData.text; leftAligned: true; Layout.fillWidth: true; onClicked: root.run("move", modelData.args) }
+                    Action { fontFamily: root.fontFamily; required property var modelData; text: modelData.text; leftAligned: true; Layout.fillWidth: true; onClicked: root.run("move", modelData.args) }
                 }
             }
             ColumnLayout {
                 visible: root.page === "delete"
                 enabled: !root.busy
                 Layout.fillWidth: true
-                Label { text: "Delete " + root.tasks.length + (root.tasks.length === 1 ? " task" : " tasks") + " and their subtasks?"; wrapMode: Text.Wrap; elide: Text.ElideNone; Layout.fillWidth: true }
+                Label { font.family: root.fontFamily; text: "Delete " + root.tasks.length + (root.tasks.length === 1 ? " task" : " tasks") + " and their subtasks?"; wrapMode: Text.Wrap; elide: Text.ElideNone; Layout.fillWidth: true }
                 RowLayout {
-                    Action { text: "Cancel"; onClicked: root.page = "main" }
-                    Action { text: "Delete"; objectName: "bulkConfirmDelete"; foreground: Color.urgent; bordered: true; onClicked: root.run("delete", null) }
+                    Action { fontFamily: root.fontFamily; text: "Cancel"; onClicked: root.page = "main" }
+                    Action { fontFamily: root.fontFamily; text: "Delete"; objectName: "bulkConfirmDelete"; foreground: Color.urgent; bordered: true; onClicked: root.run("delete", null) }
                 }
             }
         }

@@ -42,6 +42,12 @@ Temporary sync failures retry automatically after 5 seconds, with increasing del
 
 The settings button opens panel size, account, and shortcut settings inside the panel. Disconnect clears the saved token and account data.
 
+**Settings → Font** lets you search installed fonts and use a proportional face
+such as **Inter** or **Sans serif**. It applies immediately to task lists, both
+task editors, menus, and settings, and is saved in `views.json`. Choose **Follow
+bar font** to inherit the bar's font, as the display configuration panel does.
+
+
 ## Quick add
 
 The default shortcut is **Alt+Space**, matching [Todoist’s macOS Option+Space shortcut](https://www.todoist.com/help/todoist/features/use-keyboard-shortcuts-in-todoist-Wyovn2). Change it under **Settings → Quick add shortcut**, then select **Apply**. Conflicting shortcuts are rejected with the existing action's name. Leave it empty to disable it. The plugin saves your preference and registers it again when the shell starts or Hyprland reloads; no manual binding is needed.
