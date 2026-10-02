@@ -182,11 +182,13 @@ FocusScope {
         Action { text: "Clear"; enabled: !root.service.saving; onClicked: root.clearSelection() }
     }
     C.ScrollView {
+        id: settingsScroll
         visible: root.setupVisible
         anchors.top: status.bottom; anchors.topMargin: Style.space(18)
         anchors.bottom: parent.bottom
         width: parent.width; clip: true
         contentWidth: availableWidth
+        ScrollHandler { flickable: settingsScroll.contentItem }
         Settings { id: setup; width: parent.width; service: root.service }
     }
     ListView {
@@ -202,7 +204,8 @@ FocusScope {
         model: []
         spacing: 0
         cacheBuffer: Style.space(1000)
-        C.ScrollBar.vertical: C.ScrollBar { policy: list.contentHeight > list.height ? C.ScrollBar.AsNeeded : C.ScrollBar.AlwaysOff }
+        ScrollHandler { flickable: list; enabled: list.interactive }
+        C.ScrollBar.vertical: C.ScrollBar { objectName: "taskScrollBar"; policy: list.contentHeight > list.height ? C.ScrollBar.AsNeeded : C.ScrollBar.AlwaysOff }
         header: Label {
             width: list.width
             height: visible ? Style.space(60) : 0
@@ -323,7 +326,9 @@ FocusScope {
         closePolicy: C.Popup.CloseOnEscape | C.Popup.CloseOnPressOutsideParent
         background: Rectangle { color: Color.popups.background; border.width: 1; border.color: Color.popups.border; radius: Style.cornerRadius }
         contentItem: C.ScrollView {
+            id: displayScroll
             clip: true; contentWidth: availableWidth
+            ScrollHandler { flickable: displayScroll.contentItem }
             DisplayOptions { id: displayOptions; width: parent.width; service: root.service; view: root.view }
         }
     }

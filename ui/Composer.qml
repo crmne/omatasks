@@ -178,12 +178,14 @@ ColumnLayout {
         Keys.onPressed: event => root.handleKey(event)
     }
     C.ScrollView {
+        id: descriptionScroll
         Layout.fillWidth: true
         Layout.preferredHeight: Math.min(Style.space(90), Math.max(Style.space(28), description.implicitHeight))
         visible: root.descriptionVisible || description.text !== ""
         clip: true
         contentWidth: availableWidth
         C.ScrollBar.horizontal.policy: C.ScrollBar.AlwaysOff
+        ScrollHandler { flickable: descriptionScroll.contentItem }
         C.TextArea {
             id: description
             width: parent.width
@@ -275,6 +277,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 Layout.preferredHeight: Math.min(Style.space(160), contentHeight)
                 clip: true; boundsBehavior: Flickable.StopAtBounds
+                ScrollHandler { flickable: suggestions }
                 model: root.choices
                 C.ScrollBar.vertical: C.ScrollBar {}
                 delegate: C.AbstractButton {
