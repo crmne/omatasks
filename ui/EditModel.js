@@ -1,9 +1,19 @@
-function snapshot(task) {
+// Todoist keeps the words a date was typed with, so a task scheduled for
+// "tomorrow" yesterday still says "tomorrow" today. Name its day from now,
+// or a picked "tomorrow" would look unchanged and never be sent.
+function dueText(due, now) {
+    var text = due.string || due.date || "", match = /^(?:today|tomorrow|yesterday|next week)\b/i.exec(text);
+    if (!match || due.is_recurring || !due.date || !now) return text;
+    var day = /Z$/.test(due.date) ? dateKey(new Date(due.date)) : due.date.slice(0, 10), next = new Date(now);
+    next.setDate(next.getDate() + 1);
+    return (day === dateKey(now) ? "today" : day === dateKey(next) ? "tomorrow" : day) + text.slice(match[0].length);
+}
+function snapshot(task, now) {
     return {
         text: task.content || "", description: task.description || "",
         projectId: String(task.project_id || ""), sectionId: String(task.section_id || ""),
         labels: (task.labels || []).slice(), priority: 5 - Number(task.priority || 1),
-        due: (task.due || {}).string || (task.due || {}).date || "",
+        due: dueText(task.due || {}, now),
         deadline: (task.deadline || {}).date || "",
         assigneeId: String(task.responsible_uid || task.assignee_id || ""),
         duration: (task.duration || {}).amount || 0, durationUnit: (task.duration || {}).unit || "minute"
@@ -22,7 +32,7 @@ function deadlineDate(value, now) {
     throw new Error("Use Today, Tomorrow, Next week, or YYYY-MM-DD for the deadline.");
 }
 function changes(task, draft, now) {
-    var original = snapshot(task), args = {}, move = null;
+    var original = snapshot(task, now), args = {}, move = null;
     if (!draft.text.trim()) throw new Error("Enter a task name.");
     if (draft.text !== original.text) args.content = draft.text.trim();
     if (draft.description !== original.description) args.description = draft.description;

@@ -65,7 +65,7 @@ ColumnLayout {
 
     function loadTask() {
         originalTask = JSON.parse(JSON.stringify(editingTask));
-        var data = Edit.snapshot(originalTask);
+        var data = Edit.snapshot(originalTask, service.now);
         input.text = data.text; description.text = data.description; descriptionVisible = true;
         project = service.projectMap[data.projectId] || {id: data.projectId, name: "Project"};
         section = service.sectionMap[data.sectionId] || null;
