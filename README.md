@@ -121,6 +121,7 @@ The layout follows Todoist’s [Quick Add design comparison](https://www.todoist
 - The bar number counts today's and overdue tasks assigned to you or unassigned, independent of panel filters.
 - **Ctrl+Tab / Ctrl+Shift+Tab** switches tabs. **Tab** moves between controls. **Escape** closes the current editor, menu, or panel.
 - Middle-click the bar widget, or use **Display → Refresh**, to refresh immediately. Background sync runs every minute.
+- To open the panel from a key, bind `omarchy-shell crmne.todoist toggle` in Hyprland, for example `o.bind("SUPER + SHIFT + T", "Todoist", "omarchy-shell crmne.todoist toggle")`. It opens on the focused monitor and closes the panel if it is already open; `open` and `close` also work.
 
 <details>
 <summary>Task menu, details, and display options</summary>
