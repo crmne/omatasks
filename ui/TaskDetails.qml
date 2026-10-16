@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls as C
 import QtQuick.Layouts
 import qs.Commons
+import qs.Commons as Commons
 import "../Model.js" as Model
 import "EditModel.js" as Edit
 
@@ -63,7 +64,7 @@ Item {
                     Label { font.family: root.fontFamily; Layout.fillWidth: true; Layout.minimumWidth: 0; Layout.alignment: Qt.AlignTop; Layout.topMargin: Style.space(5); text: Model.plain(root.task.content); wrapMode: Text.Wrap; elide: Text.ElideNone; font.bold: true }
                 }
                 Label { font.family: root.fontFamily; Layout.fillWidth: true; Layout.minimumWidth: 0; text: root.task.description || ""; visible: text !== ""; wrapMode: Text.Wrap; elide: Text.ElideNone; opacity: 0.7 }
-                Rectangle { Layout.fillWidth: true; height: 1; color: Color.popups.text; opacity: 0.12 }
+                Rectangle { Layout.fillWidth: true; height: 1; color: Commons.Color.popups.text; opacity: 0.12 }
                 Repeater {
                     model: root.information
                     RowLayout {
@@ -71,7 +72,7 @@ Item {
                         Layout.fillWidth: true; Layout.minimumWidth: 0
                         spacing: Style.space(10)
                         Label { font.family: root.fontFamily; Layout.preferredWidth: Style.space(70); Layout.alignment: Qt.AlignTop; text: modelData.name; opacity: 0.5; font.pixelSize: Style.font.bodySmall }
-                        Label { font.family: root.fontFamily; Layout.fillWidth: true; Layout.minimumWidth: 0; text: modelData.value; color: modelData.color || Color.popups.text; wrapMode: Text.Wrap; elide: Text.ElideNone; font.pixelSize: Style.font.bodySmall }
+                        Label { font.family: root.fontFamily; Layout.fillWidth: true; Layout.minimumWidth: 0; text: modelData.value; color: modelData.color || Commons.Color.popups.text; wrapMode: Text.Wrap; elide: Text.ElideNone; font.pixelSize: Style.font.bodySmall }
                     }
                 }
                 Repeater {
@@ -104,7 +105,7 @@ Item {
                     onCancelled: root.editing = false
                 }
             }
-            Label { font.family: root.fontFamily; Layout.fillWidth: true; Layout.minimumWidth: 0; visible: text !== ""; text: root.message; wrapMode: Text.Wrap; elide: Text.ElideNone; color: Color.urgent }
+            Label { font.family: root.fontFamily; Layout.fillWidth: true; Layout.minimumWidth: 0; visible: text !== ""; text: root.message; wrapMode: Text.Wrap; elide: Text.ElideNone; color: Commons.Color.urgent }
         }
     }
     ColumnLayout {

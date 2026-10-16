@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls as C
 import QtQuick.Layouts
 import qs.Commons
+import qs.Commons as Commons
 import "../Model.js" as Model
 import "OrderModel.js" as Order
 import "BulkModel.js" as Bulk
@@ -154,7 +155,7 @@ FocusScope {
             id: statusText
             Layout.fillWidth: true
             text: root.service.error || (!root.service.loaded && root.service.configured ? "Loading tasks…" : "")
-            color: root.service.error ? Color.urgent : Color.popups.text
+            color: root.service.error ? Commons.Color.urgent : Commons.Color.popups.text
             wrapMode: Text.WordWrap; elide: Text.ElideNone
             font.pixelSize: Style.font.bodySmall
         }
@@ -172,7 +173,7 @@ FocusScope {
         width: parent.width
         height: visible ? Style.space(34) : 0
         visible: root.selectedIds.length > 0 && !root.setupVisible
-        Label { font.family: root.fontFamily; Layout.fillWidth: true; text: root.selectedIds.length + " selected"; color: Color.accent; font.pixelSize: Style.font.bodySmall }
+        Label { font.family: root.fontFamily; Layout.fillWidth: true; text: root.selectedIds.length + " selected"; color: Commons.Color.accent; font.pixelSize: Style.font.bodySmall }
         Action { fontFamily: root.fontFamily;
             text: "Actions…"; objectName: "selectionActions"; enabled: !root.service.saving
             onClicked: {
@@ -223,8 +224,8 @@ FocusScope {
                 id: groupComponent
                 Item {
                     implicitHeight: Style.space(40)
-                    Label { font.family: root.fontFamily; anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.bottomMargin: Style.space(9); text: rowLoader.modelData.title; font.bold: true; color: text === "Overdue" ? "#ef615b" : Color.popups.text }
-                    Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Color.popups.text; opacity: 0.12 }
+                    Label { font.family: root.fontFamily; anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.bottomMargin: Style.space(9); text: rowLoader.modelData.title; font.bold: true; color: text === "Overdue" ? "#ef615b" : Commons.Color.popups.text }
+                    Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Commons.Color.popups.text; opacity: 0.12 }
                 }
             }
             Component {
@@ -253,7 +254,7 @@ FocusScope {
                         visible: root.composerKey !== rowLoader.modelData.key
                         y: Style.space(5)
                         text: "+   Add task"
-                        foreground: Color.popups.text
+                        foreground: Commons.Color.popups.text
                         onClicked: root.addAt(rowLoader.modelData.key, rowLoader.modelData.projectId)
                     }
                     Loader {
@@ -291,13 +292,13 @@ FocusScope {
         visible: root.dragging && root.dropIndex >= 0
         x: Style.space(31); y: root.dropY - 1
         width: root.width - x; height: Style.space(2)
-        color: Color.accent; z: 2
+        color: Commons.Color.accent; z: 2
     }
     Rectangle {
         visible: root.dragging
         x: Style.space(24); y: Math.max(list.y, Math.min(root.height - height, root.dragY + Style.space(18)))
         width: root.width - x; height: dragLabel.implicitHeight + Style.space(16)
-        color: Color.popups.background; border.color: Color.popups.border
+        color: Commons.Color.popups.background; border.color: Commons.Color.popups.border
         radius: Style.cornerRadius; opacity: 0.95; z: 3
         Label { font.family: root.fontFamily;
             id: dragLabel
@@ -322,7 +323,7 @@ FocusScope {
         padding: Style.space(16)
         focus: true
         closePolicy: C.Popup.CloseOnEscape | C.Popup.CloseOnPressOutsideParent
-        background: Rectangle { color: Color.popups.background; border.width: 1; border.color: Color.popups.border; radius: Style.cornerRadius }
+        background: Rectangle { color: Commons.Color.popups.background; border.width: 1; border.color: Commons.Color.popups.border; radius: Style.cornerRadius }
         contentItem: C.ScrollView {
             clip: true; contentWidth: availableWidth
             DisplayOptions { id: displayOptions; width: parent.width; service: root.service; view: root.view }
@@ -336,7 +337,7 @@ FocusScope {
         height: Math.min(root.height - y, (detailLoader.item ? detailLoader.item.implicitHeight : 0) + padding * 2)
         padding: Style.space(16); focus: true
         closePolicy: detailLoader.item && (detailLoader.item.editing || detailLoader.item.busy) ? C.Popup.NoAutoClose : C.Popup.CloseOnEscape | C.Popup.CloseOnPressOutside
-        background: Rectangle { color: Color.popups.background; border.width: 1; border.color: Color.popups.border; radius: Style.cornerRadius }
+        background: Rectangle { color: Commons.Color.popups.background; border.width: 1; border.color: Commons.Color.popups.border; radius: Style.cornerRadius }
         contentItem: Loader {
             id: detailLoader
             active: details.visible && root.selectedTask !== null

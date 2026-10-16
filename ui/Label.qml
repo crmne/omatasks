@@ -1,8 +1,9 @@
 import QtQuick
 import qs.Commons
+import qs.Commons as Commons
 
 Text {
-    color: Color.popups.text
+    color: Commons.Color.popups.text
     font.family: Qt.application.font.family
     font.pixelSize: Style.font.body
     textFormat: Text.PlainText

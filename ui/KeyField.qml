@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui as UI
 import "KeyEdit.js" as KeyEdit
 
@@ -32,8 +33,8 @@ Item {
     // Optional function(text) -> bool. An edit that fails it is ignored.
     property var validator: null
     property int horizontalAlignment: Text.AlignLeft
-    property color foreground: Color.foreground
-    property color accent: Color.accent
+    property color foreground: Commons.Color.foreground
+    property color accent: Commons.Color.accent
     property color placeholderTextColor: Qt.darker(foreground, 1.6)
     property color selectionColor: Style.selectionFillFor(foreground, accent)
     property real horizontalPadding: framed ? Style.spacing.controlPaddingX : 0

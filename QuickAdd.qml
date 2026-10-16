@@ -3,6 +3,7 @@ import QtQuick.Controls as C
 import Quickshell
 import Quickshell.Wayland
 import qs.Commons
+import qs.Commons as Commons
 import "ui" as Tasks
 
 Item {
@@ -37,8 +38,8 @@ Item {
             anchors.centerIn: parent
             width: Math.min(Style.space(460), window.width - Style.space(32))
             height: Math.min(composer.implicitHeight + Style.space(36), window.height - Style.space(32))
-            color: Color.popups.background
-            border.color: Color.popups.border; border.width: 1; radius: Style.cornerRadius
+            color: Commons.Color.popups.background
+            border.color: Commons.Color.popups.border; border.width: 1; radius: Style.cornerRadius
             MouseArea { anchors.fill: parent }
             C.ScrollView {
                 anchors.fill: parent

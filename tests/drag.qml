@@ -3,6 +3,7 @@ import QtQuick
 import QtTest
 import Quickshell
 import qs.Commons
+import qs.Commons as Commons
 import "plugin" as Plugin
 import "plugin/ui" as Tasks
 
@@ -31,7 +32,7 @@ ShellRoot {
         id: window
         visible: true
         implicitWidth: 456; implicitHeight: 540
-        color: Color.popups.background
+        color: Commons.Color.popups.background
         Tasks.TaskList { id: taskList; anchors.fill: parent; anchors.margins: 18; service: service }
     }
     TestCase {

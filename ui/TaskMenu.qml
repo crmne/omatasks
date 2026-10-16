@@ -3,6 +3,7 @@ import QtQuick.Controls as C
 import QtQuick.Layouts
 import Quickshell
 import qs.Commons
+import qs.Commons as Commons
 import "../Model.js" as Model
 
 C.Popup {
@@ -27,7 +28,7 @@ C.Popup {
     padding: Style.space(10)
     focus: true
     closePolicy: busy ? C.Popup.NoAutoClose : C.Popup.CloseOnEscape | C.Popup.CloseOnPressOutside
-    background: Rectangle { color: Color.popups.background; border.color: Color.popups.border; radius: Style.cornerRadius }
+    background: Rectangle { color: Commons.Color.popups.background; border.color: Commons.Color.popups.border; radius: Style.cornerRadius }
     onOpened: { page = "main"; message = ""; canRetry = false; input.text = ""; search.text = ""; }
     onPageChanged: Qt.callLater(function() { scroll.contentItem.contentY = 0; })
 
@@ -56,7 +57,7 @@ C.Popup {
                 Action { fontFamily: root.fontFamily; text: "×"; tip: "Close menu"; enabled: !root.busy; onClicked: root.close() }
             }
             Label { font.family: root.fontFamily; visible: root.busy; text: "Saving changes…"; opacity: 0.6 }
-            Label { font.family: root.fontFamily; visible: text !== ""; text: root.message; color: Color.urgent; Layout.fillWidth: true; wrapMode: Text.Wrap; elide: Text.ElideNone }
+            Label { font.family: root.fontFamily; visible: text !== ""; text: root.message; color: Commons.Color.urgent; Layout.fillWidth: true; wrapMode: Text.Wrap; elide: Text.ElideNone }
             Action { fontFamily: root.fontFamily;
                 visible: root.canRetry && !!root.service.bulkRetry
                 text: "Retry remaining changes"; enabled: !root.busy
@@ -69,7 +70,7 @@ C.Popup {
                 spacing: Style.space(5)
                 Action { fontFamily: root.fontFamily; visible: root.tasks.length === 1; text: "Edit"; leftAligned: true; Layout.fillWidth: true; onClicked: { var task = root.tasks[0]; root.close(); root.editRequested(task); } }
                 Action { fontFamily: root.fontFamily; text: "✓   Complete"; objectName: "bulkComplete"; leftAligned: true; Layout.fillWidth: true; onClicked: root.run("complete", null) }
-                Rectangle { Layout.fillWidth: true; height: 1; color: Color.popups.text; opacity: 0.12 }
+                Rectangle { Layout.fillWidth: true; height: 1; color: Commons.Color.popups.text; opacity: 0.12 }
                 Label { font.family: root.fontFamily; text: "Date"; font.bold: true; Layout.topMargin: Style.space(4) }
                 RowLayout {
                     Layout.fillWidth: true
@@ -80,8 +81,8 @@ C.Popup {
                             {value: "tomorrow", text: "☀", tip: "Tomorrow", color: "#eb9700"},
                             {value: "weekend", text: "▱", tip: "This weekend", color: "#5297ff"},
                             {value: "nextweek", text: "→", tip: "Next Monday", color: "#b58ce8"},
-                            {value: "", text: "∅", tip: "Remove date", color: Color.popups.text},
-                            {value: "custom", text: "…", tip: "Choose date or recurrence", color: Color.popups.text}
+                            {value: "", text: "∅", tip: "Remove date", color: Commons.Color.popups.text},
+                            {value: "custom", text: "…", tip: "Choose date or recurrence", color: Commons.Color.popups.text}
                         ]
                         Action { fontFamily: root.fontFamily;
                             required property var modelData
@@ -107,7 +108,7 @@ C.Popup {
                         }
                     }
                 }
-                Rectangle { Layout.fillWidth: true; height: 1; color: Color.popups.text; opacity: 0.12; Layout.topMargin: Style.space(4) }
+                Rectangle { Layout.fillWidth: true; height: 1; color: Commons.Color.popups.text; opacity: 0.12; Layout.topMargin: Style.space(4) }
                 Action { fontFamily: root.fontFamily; text: "⚑   Deadline…"; leftAligned: true; Layout.fillWidth: true; onClicked: root.showPage("deadline") }
                 Action { fontFamily: root.fontFamily; text: "◷   Add reminder…"; leftAligned: true; Layout.fillWidth: true; onClicked: root.showPage("reminder") }
                 Action { fontFamily: root.fontFamily; text: "Move to…"; objectName: "bulkMove"; leftAligned: true; Layout.fillWidth: true; onClicked: root.showPage("move") }
@@ -117,8 +118,8 @@ C.Popup {
                     leftAligned: true; Layout.fillWidth: true
                     onClicked: { Quickshell.clipboardText = root.tasks.map(function(t) { return "https://app.todoist.com/app/task/" + encodeURIComponent(t.id); }).join("\n"); root.close(); }
                 }
-                Rectangle { Layout.fillWidth: true; height: 1; color: Color.popups.text; opacity: 0.12 }
-                Action { fontFamily: root.fontFamily; text: "Delete…"; objectName: "bulkDelete"; foreground: Color.urgent; leftAligned: true; Layout.fillWidth: true; onClicked: root.showPage("delete") }
+                Rectangle { Layout.fillWidth: true; height: 1; color: Commons.Color.popups.text; opacity: 0.12 }
+                Action { fontFamily: root.fontFamily; text: "Delete…"; objectName: "bulkDelete"; foreground: Commons.Color.urgent; leftAligned: true; Layout.fillWidth: true; onClicked: root.showPage("delete") }
             }
             ColumnLayout {
                 visible: ["customDate", "deadline", "reminder"].indexOf(root.page) >= 0
@@ -162,7 +163,7 @@ C.Popup {
                 Label { font.family: root.fontFamily; text: "Delete " + root.tasks.length + (root.tasks.length === 1 ? " task" : " tasks") + " and their subtasks?"; wrapMode: Text.Wrap; elide: Text.ElideNone; Layout.fillWidth: true }
                 RowLayout {
                     Action { fontFamily: root.fontFamily; text: "Cancel"; onClicked: root.page = "main" }
-                    Action { fontFamily: root.fontFamily; text: "Delete"; objectName: "bulkConfirmDelete"; foreground: Color.urgent; bordered: true; onClicked: root.run("delete", null) }
+                    Action { fontFamily: root.fontFamily; text: "Delete"; objectName: "bulkConfirmDelete"; foreground: Commons.Color.urgent; bordered: true; onClicked: root.run("delete", null) }
                 }
             }
         }

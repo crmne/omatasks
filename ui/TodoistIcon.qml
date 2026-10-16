@@ -1,11 +1,12 @@
 import QtQuick
 import QtQuick.Shapes
 import qs.Commons
+import qs.Commons as Commons
 
 // Todoist's mark, rendered in the bar's foreground color.
 Item {
     id: root
-    property color color: Color.foreground
+    property color color: Commons.Color.foreground
     implicitWidth: Style.space(16)
     implicitHeight: Style.space(16)
     Shape {
