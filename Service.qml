@@ -82,6 +82,7 @@ Item {
         var widget = widgets.filter(function(w) { return w.QsWindow.window && w.QsWindow.window.screen.name === name; })[0] || widgets[0];
         if (widget) widget.open();
     }
+    function togglePanel() { if (widgets.some(function(w) { return w.opened; })) closePanels(); else openPanel(); }
     function viewOptions(view) { return Object.assign({}, Model.DEFAULT_VIEW, preferences[view] || {}); }
     function setOption(view, key, value) {
         var next = Object.assign({}, preferences), options = viewOptions(view);
@@ -454,6 +455,12 @@ Item {
             root.preferencesLoaded = true;
         }
         onSaveFailed: root.error = "Could not save the display preferences."
+    }
+    IpcHandler {
+        target: "crmne.todoist"
+        function open(): void { root.openPanel(); }
+        function close(): void { root.closePanels(); }
+        function toggle(): void { root.togglePanel(); }
     }
     ShortcutManager { id: shortcuts; service: root; enabled: root.enableShortcuts && root.preferencesLoaded }
     Process {

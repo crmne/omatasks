@@ -124,6 +124,7 @@ The layout follows Todoist’s [Quick Add design comparison](https://www.todoist
 - The bar also names a timed task while it is due, as in "Call Ana · in 12m", from 15 minutes before its time until its duration ends (30 minutes without one); "+1" means another task is due at once. Hover for the full names. Change this under **Settings → In the bar**: **Today's next task** always names the next timed task today, **Today's count** keeps only the number, and **Icon only** hides it. A vertical bar shows the number.
 - **Ctrl+Tab / Ctrl+Shift+Tab** switches tabs. **Tab** moves between controls. **Escape** closes the current editor, menu, or panel.
 - Middle-click the bar widget, or use **Display → Refresh**, to refresh immediately. Background sync runs every minute.
+- To open the panel from a key, bind `omarchy-shell crmne.todoist toggle` in Hyprland, for example `o.bind("SUPER + SHIFT + T", "Todoist", "omarchy-shell crmne.todoist toggle")`. It opens on the focused monitor and closes the panel if it is already open; `open` and `close` also work.
 
 <details>
 <summary>Task menu, details, and display options</summary>

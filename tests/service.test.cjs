@@ -387,3 +387,13 @@ test('The bar mode is saved with the view preferences and rejects unknown modes'
     s.setBarMode('everything');
     assert.equal(s.preferences.barTask, 'next');
 });
+test('Toggling the panel opens it on the focused monitor, or closes every open one', () => {
+    const {s} = service();
+    const widget = name => ({opened: false, QsWindow: {window: {screen: {name}}}, open() { this.opened = true; }, close() { this.opened = false; }});
+    s.widgets = [widget('DP-1'), widget('DP-2')];
+    s.Hyprland = {focusedMonitor: {name: 'DP-2'}};
+    s.togglePanel();
+    assert.deepEqual(s.widgets.map(w => w.opened), [false, true]);
+    s.togglePanel();
+    assert.deepEqual(s.widgets.map(w => w.opened), [false, false]);
+});
