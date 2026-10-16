@@ -1,12 +1,13 @@
 import QtQuick
 import qs.Commons
+import qs.Commons as Commons
 
 Item {
     id: root
     property string fontFamily: Qt.application.font.family
     property string text: ""
     property string iconName: ""
-    property color foreground: Color.popups.text
+    property color foreground: Commons.Color.popups.text
     property bool removable: false
     property real maximumWidth: Style.space(220)
     signal clicked()

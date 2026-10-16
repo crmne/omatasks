@@ -4,6 +4,7 @@ import QtQuick.Controls as C
 import QtTest
 import Quickshell
 import qs.Commons
+import qs.Commons as Commons
 import "plugin" as Plugin
 import "plugin/ui" as Tasks
 
@@ -34,13 +35,13 @@ ShellRoot {
         id: window
         visible: true
         implicitWidth: 560; implicitHeight: 740
-        color: Color.popups.background
+        color: Commons.Color.popups.background
         Rectangle {
             id: card
             width: parent.width
             height: (settings.visible ? settings.implicitHeight : composer.implicitHeight) + 36
-            color: Color.popups.background
-            border.color: Color.popups.border; border.width: 1; radius: Style.cornerRadius
+            color: Commons.Color.popups.background
+            border.color: Commons.Color.popups.border; border.width: 1; radius: Style.cornerRadius
             Tasks.Composer { id: composer; x: 18; y: 18; width: parent.width - 36; service: service }
             Tasks.Settings { id: settings; visible: false; x: 18; y: 18; width: parent.width - 36; service: service }
         }
@@ -157,14 +158,14 @@ ShellRoot {
             service.widgets = []; compare(composer.fontFamily, family); compare(settings.fontFamily, family);
         }
         function test_light_and_dark_highlight_colors() {
-            var original = Color.popups.background;
-            Color.popups.background = "#ffffff"; compare(composer.dark, false);
+            var original = Commons.Color.popups.background;
+            Commons.Color.popups.background = "#ffffff"; compare(composer.dark, false);
             compare(composer.highlightColor({kind: "due"}), "#ffe3e3"); compare(composer.priorityColor(1), "#d1453b");
             compare(composer.dateColor("tomorrow"), "#ad6200");
-            Color.popups.background = "#282828"; compare(composer.dark, true);
+            Commons.Color.popups.background = "#282828"; compare(composer.dark, true);
             compare(composer.highlightColor({kind: "due"}), "#722724"); compare(composer.priorityColor(1), "#ff5c50");
             compare(composer.dateColor("tomorrow"), "#ff9a00");
-            Color.popups.background = original;
+            Commons.Color.popups.background = original;
         }
         function test_description_keeps_shortcuts_literal_and_ctrl_enter_submits() {
             enter("Review"); keyClick(Qt.Key_Down);
@@ -258,11 +259,11 @@ ShellRoot {
             var scene = scenes[Math.floor(phase / 2)];
             if (!scene) { Qt.quit(); return; }
             if (phase % 2 === 0) {
-                Color.popups.background = scene.theme === "light" ? "#ffffff" : "#282828";
-                Color.popups.text = scene.theme === "light" ? "#202020" : "#eeeeee";
-                Color.popups.border = scene.theme === "light" ? "#cccccc" : "#555555";
-                Color.foreground = Color.popups.text; Color.background = Color.popups.background;
-                Color.accent = scene.theme === "light" ? "#d1453b" : "#ff5c50";
+                Commons.Color.popups.background = scene.theme === "light" ? "#ffffff" : "#282828";
+                Commons.Color.popups.text = scene.theme === "light" ? "#202020" : "#eeeeee";
+                Commons.Color.popups.border = scene.theme === "light" ? "#cccccc" : "#555555";
+                Commons.Color.foreground = Commons.Color.popups.text; Commons.Color.background = Commons.Color.popups.background;
+                Commons.Color.accent = scene.theme === "light" ? "#d1453b" : "#ff5c50";
                 // Use the real bar default; a fake proportional bar font hides regressions.
                 service.widgets = [fontWidget]; fontBar.fontFamily = Style.font.family;
                 service.preferences = {};

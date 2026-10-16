@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import qs.Commons
+import qs.Commons as Commons
 
 ColumnLayout {
     id: root
@@ -24,9 +25,9 @@ ColumnLayout {
         }
         Label { font.family: root.fontFamily; Layout.fillWidth: true; text: "Pixels. The panel shrinks to fit shorter lists."; font.pixelSize: Style.font.caption; opacity: 0.5; wrapMode: Text.WordWrap; elide: Text.ElideNone }
     }
-    Rectangle { visible: root.service.configured; Layout.fillWidth: true; height: 1; color: Color.popups.text; opacity: 0.12 }
+    Rectangle { visible: root.service.configured; Layout.fillWidth: true; height: 1; color: Commons.Color.popups.text; opacity: 0.12 }
     Setup { Layout.fillWidth: true; service: root.service }
-    Rectangle { Layout.fillWidth: true; height: 1; color: Color.popups.text; opacity: 0.12 }
+    Rectangle { Layout.fillWidth: true; height: 1; color: Commons.Color.popups.text; opacity: 0.12 }
     ColumnLayout {
         Layout.fillWidth: true
         spacing: Style.space(8)
@@ -50,7 +51,7 @@ ColumnLayout {
             Layout.fillWidth: true
             visible: text !== ""
             text: root.service.shortcut.message
-            color: root.service.shortcut.successful ? Color.popups.text : Color.urgent
+            color: root.service.shortcut.successful ? Commons.Color.popups.text : Commons.Color.urgent
             opacity: 0.7; wrapMode: Text.WordWrap; elide: Text.ElideNone; font.pixelSize: Style.font.caption
         }
     }

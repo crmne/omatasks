@@ -1,11 +1,12 @@
 import QtQuick
 import qs.Commons
+import qs.Commons as Commons
 
 // Small, theme-colored list-view icons, drawn at their native size.
 Item {
     id: root
     property string name: "today"
-    property color color: Color.popups.text
+    property color color: Commons.Color.popups.text
     property int day: new Date().getDate()
     implicitWidth: Style.space(16)
     implicitHeight: Style.space(16)
