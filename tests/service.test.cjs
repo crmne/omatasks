@@ -324,3 +324,13 @@ test('Authorization failures do not schedule transient retries; malformed sync r
     s.refresh(true); wires[2].respond(200, {});
     assert.equal(s.syncFailures, 2);
 });
+test('Toggling the panel opens it on the focused monitor, or closes every open one', () => {
+    const {s} = service();
+    const widget = name => ({opened: false, QsWindow: {window: {screen: {name}}}, open() { this.opened = true; }, close() { this.opened = false; }});
+    s.widgets = [widget('DP-1'), widget('DP-2')];
+    s.Hyprland = {focusedMonitor: {name: 'DP-2'}};
+    s.togglePanel();
+    assert.deepEqual(s.widgets.map(w => w.opened), [false, true]);
+    s.togglePanel();
+    assert.deepEqual(s.widgets.map(w => w.opened), [false, false]);
+});
