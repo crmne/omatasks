@@ -64,9 +64,7 @@ Item {
     readonly property var sectionMap: Model.byId(sections)
     readonly property int panelWidth: Math.max(360, Math.min(1000, Number(preferences.panelWidth) || 420))
     readonly property int panelHeight: Math.max(280, Math.min(1200, Number(preferences.panelHeight) || 560))
-    readonly property int todayCount: tasks.filter(function(t) {
-        return Model.inView(t, "today", Model.dateKey(now), projectMap) && Model.matches(t, Model.DEFAULT_VIEW, user.id, Model.dateKey(now));
-    }).length
+    readonly property int todayCount: Model.todayCount(tasks, projects, user.id, now, viewOptions("today").folder)
     property string stateDir: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/omarchy-todoist"
 
     signal taskAdded()
