@@ -89,7 +89,7 @@ Item {
         if (shell) shell.summon(manifest && manifest.id ? manifest.id : "crmne.todoist", "{}");
     }
     function togglePanel() { if (widgets.some(function(w) { return w.opened; })) closePanels(); else openPanel(); }
-    function viewOptions(view) { return Object.assign({}, Model.DEFAULT_VIEW, preferences[view] || {}); }
+    function viewOptions(view) { return Object.assign({}, Model.DEFAULT_VIEW, Model.VIEW_DEFAULTS[view] || {}, preferences[view] || {}); }
     function setOption(view, key, value) {
         var next = Object.assign({}, preferences), options = viewOptions(view);
         options[key] = value;
