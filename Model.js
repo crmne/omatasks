@@ -1,5 +1,6 @@
 // Pure data transformations; also exercised by node --test.
 var DEFAULT_VIEW = { grouping: "none", sorting: "smart", assignee: "mine", priority: "all", label: "all", deadline: "all" };
+var VIEW_DEFAULTS = { all: { grouping: "project" } };
 var API_BASE = "https://api.todoist.com/api/v1";
 var TOKEN_URL = "https://app.todoist.com/app/settings/integrations/developer";
 

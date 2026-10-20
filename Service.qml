@@ -69,7 +69,7 @@ Item {
         var widget = widgets.filter(function(w) { return w.QsWindow.window && w.QsWindow.window.screen.name === name; })[0] || widgets[0];
         if (widget) widget.open();
     }
-    function viewOptions(view) { return Object.assign({}, Model.DEFAULT_VIEW, preferences[view] || {}); }
+    function viewOptions(view) { return Object.assign({}, Model.DEFAULT_VIEW, Model.VIEW_DEFAULTS[view] || {}, preferences[view] || {}); }
     function setOption(view, key, value) {
         var next = Object.assign({}, preferences), options = viewOptions(view);
         options[key] = value;
