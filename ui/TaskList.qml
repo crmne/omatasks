@@ -132,7 +132,7 @@ FocusScope {
                 required property var modelData
                 objectName: "viewTab_" + modelData.id
                 Layout.fillWidth: true
-                Layout.preferredWidth: 0
+                Layout.preferredWidth: implicitWidth
                 Layout.minimumWidth: 0
                 text: modelData.title
                 iconName: modelData.id

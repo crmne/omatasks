@@ -63,7 +63,7 @@ Item {
     readonly property bool configured: token.length > 0
     readonly property var projectMap: Model.byId(projects)
     readonly property var sectionMap: Model.byId(sections)
-    readonly property int panelWidth: Math.max(360, Math.min(1000, Number(preferences.panelWidth) || 420))
+    readonly property int panelWidth: Math.max(440, Math.min(1000, Number(preferences.panelWidth) || 460))
     readonly property int panelHeight: Math.max(280, Math.min(1200, Number(preferences.panelHeight) || 560))
     readonly property int todayCount: Model.todayCount(tasks, projects, user.id, now, viewOptions("today").folder)
     property string stateDir: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/omarchy-todoist"
@@ -123,7 +123,7 @@ Item {
     function setPanelSize(key, value) {
         if (key !== "panelWidth" && key !== "panelHeight") return;
         var next = Object.assign({}, preferences);
-        next[key] = Math.max(key === "panelWidth" ? 360 : 280, Math.min(key === "panelWidth" ? 1000 : 1200, Math.round(Number(value))));
+        next[key] = Math.max(key === "panelWidth" ? 440 : 280, Math.min(key === "panelWidth" ? 1000 : 1200, Math.round(Number(value))));
         if (!isFinite(next[key])) return;
         preferences = next;
         if (storageReady) settingsFile.setText(JSON.stringify(preferences));

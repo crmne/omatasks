@@ -59,6 +59,16 @@ ShellRoot {
             keyClick(Qt.Key_Tab, Qt.ControlModifier | Qt.ShiftModifier);
             compare(taskList.view, "all");
         }
+        function test_no_tab_label_is_truncated_at_the_default_and_minimum_panel_widths() {
+            service.setPanelSize("panelWidth", 1);
+            var widths = [460, service.panelWidth];
+            for (var w = 0; w < widths.length; w++) {
+                taskList.anchors.fill = null; taskList.height = 500; taskList.width = Style.space(widths[w]); wait(100);
+                var total = 0;
+                for (var i = 0; i < taskList.viewTabs.length; i++) { var t = tab(taskList.viewTabs[i]); total += t.implicitWidth; }
+                for (var j = 0; j < taskList.viewTabs.length; j++) {  var b = tab(taskList.viewTabs[j]); verify(b.width >= b.implicitWidth, b.objectName + " is truncated at " + widths[w] + ": " + b.width + " < " + b.implicitWidth); }
+            }
+        }
         function test_the_bar_count_ignores_undated_tasks() {
             compare(service.todayCount, 0);
         }
