@@ -88,8 +88,10 @@ function matches(task, options, userId, today) {
     return true;
 }
 function compareText(a, b) { return String(a || "").localeCompare(String(b || "")); }
+// Inbox and All order tasks as siblings of their project; Today and Upcoming use Todoist's day order.
+function usesSiblingOrder(view) { return view === "inbox" || view === "all"; }
 function manualCompare(a, b, view) {
-    if (view !== "inbox") {
+    if (!usesSiblingOrder(view)) {
         var ao = a.day_order >= 0 ? a.day_order : 1e12, bo = b.day_order >= 0 ? b.day_order : 1e12;
         if (ao !== bo) return ao - bo;
     }
