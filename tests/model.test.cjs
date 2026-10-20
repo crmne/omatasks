@@ -60,3 +60,95 @@ test('A task appears under every label when grouped by label', () => {
     assert.deepEqual(plain(rows.filter(r => r.kind === 'group').map(r => r.title)), ['email', 'next']);
     assert.equal(rows.filter(r => r.task).length, 2);
 });
+
+const tree = [
+    { id: 'pro', name: 'Pro', child_order: 2 },
+    { id: 'planning', name: 'Planning', parent_id: 'pro', child_order: 1 },
+    { id: 'training', name: 'Training', parent_id: 'pro', child_order: 2 },
+    { id: 'sprint', name: 'Sprint', parent_id: 'planning', child_order: 1 },
+    { id: 'perso', name: 'Perso', child_order: 1 },
+    { id: 'errands', name: 'Errands', parent_id: 'perso', child_order: 1 },
+];
+const ids = folder => Object.keys(M.folderIds(tree, folder) || {}).sort();
+
+test('Folder tree lists every project under its parent, in Todoist order, with its depth', () => {
+    assert.deepEqual(plain(M.folderTree(tree).map(f => [f.id, f.depth])), [['perso', 0], ['errands', 1], ['pro', 0], ['planning', 1], ['sprint', 2], ['training', 1]]);
+    assert.deepEqual(plain(M.folderTree(tree).map(f => f.path)), ['', 'Perso', '', 'Pro', 'Pro / Planning', 'Pro']);
+});
+test('Without a selection no folder filter applies', () => {
+    assert.equal(M.folderIds(tree, null), null);
+    assert.equal(M.folderIds(tree, { include: [], exclude: [] }), null);
+    assert.equal(M.folderIds(tree, { include: ['deleted'], exclude: [] }), null);
+});
+test('Selecting a folder selects its subfolders, and an excluded subfolder drops its own subtree', () => {
+    assert.deepEqual(ids({ include: ['pro'], exclude: [] }), ['planning', 'pro', 'sprint', 'training']);
+    assert.deepEqual(ids({ include: ['pro'], exclude: ['planning'] }), ['pro', 'training']);
+    assert.deepEqual(ids({ include: ['pro', 'sprint'], exclude: ['planning'] }), ['pro', 'sprint', 'training']);
+    assert.deepEqual(ids({ include: ['planning', 'errands'], exclude: [] }), ['errands', 'planning', 'sprint']);
+});
+test('A folder filter keeps only tasks in the selected folders', () => {
+    const tasks = [task('a', { project_id: 'planning' }), task('b', { project_id: 'errands' }), task('c', { project_id: 'sprint' })];
+    const rows = M.viewRows(tasks, tree, [], { ...M.DEFAULT_VIEW, folder: { include: ['pro'], exclude: [] } }, 'today', 'me', today);
+    assert.deepEqual(plain(rows.filter(r => r.task).map(r => r.task.id)), ['a', 'c']);
+});
+const values = folder => plain(M.folderValues(tree, folder)).sort();
+test('Checking a folder selects its whole subtree and checking it again unselects it', () => {
+    const folder = M.toggleFolder(tree, null, 'pro');
+    assert.deepEqual(plain(folder), { include: ['pro'], exclude: [] });
+    assert.deepEqual(values(folder), ['planning', 'pro', 'sprint', 'training']);
+    assert.deepEqual(plain(M.toggleFolder(tree, folder, 'pro')), { include: [], exclude: [] });
+});
+test('Unchecking a subfolder keeps its parent and siblings, and checking it back restores it', () => {
+    const folder = M.toggleFolder(tree, M.toggleFolder(tree, null, 'pro'), 'planning');
+    assert.deepEqual(plain(folder), { include: ['pro'], exclude: ['planning'] });
+    assert.deepEqual(values(folder), ['pro', 'training']);
+    assert.deepEqual(plain(M.toggleFolder(tree, folder, 'planning')), { include: ['pro'], exclude: [] });
+});
+test('Siblings can be selected independently, and a folder that is not checked checks its whole subtree', () => {
+    let folder = M.toggleFolder(tree, M.toggleFolder(tree, null, 'planning'), 'errands');
+    assert.deepEqual(values(folder), ['errands', 'planning', 'sprint']);
+    folder = M.toggleFolder(tree, folder, 'pro');
+    assert.deepEqual(plain(folder), { include: ['errands', 'pro'], exclude: [] });
+    assert.deepEqual(values(folder), ['errands', 'planning', 'pro', 'sprint', 'training']);
+});
+test('A parent is partial when only some of its subtree is selected, and checked or unchecked otherwise', () => {
+    const state = (folder, id) => M.folderState(tree, folder, id);
+    assert.equal(state(null, 'pro'), 'unchecked');
+    assert.equal(state({ include: ['pro'], exclude: [] }, 'pro'), 'checked');
+    assert.equal(state({ include: ['pro'], exclude: ['planning'] }, 'pro'), 'partial');
+    assert.equal(state({ include: ['pro'], exclude: ['planning'] }, 'planning'), 'unchecked');
+    assert.equal(state({ include: ['pro'], exclude: ['planning'] }, 'training'), 'checked');
+    assert.equal(state({ include: ['sprint'], exclude: [] }, 'pro'), 'partial');
+    assert.equal(state({ include: ['sprint'], exclude: [] }, 'planning'), 'partial');
+    assert.equal(state({ include: ['sprint'], exclude: [] }, 'sprint'), 'checked');
+});
+test('Clicking a partial folder checks its whole subtree, and clicking a checked folder unchecks it', () => {
+    assert.deepEqual(plain(M.toggleFolder(tree, { include: ['pro'], exclude: ['planning'] }, 'pro')), { include: ['pro'], exclude: [] });
+    assert.deepEqual(plain(M.toggleFolder(tree, { include: ['sprint'], exclude: [] }, 'pro')), { include: ['pro'], exclude: [] });
+    assert.deepEqual(plain(M.toggleFolder(tree, { include: ['pro'], exclude: [] }, 'pro')), { include: [], exclude: [] });
+});
+test('Unchecking the last selected folder returns to showing everything', () => {
+    assert.equal(M.folderIds(tree, M.toggleFolder(tree, M.toggleFolder(tree, null, 'errands'), 'errands')), null);
+});
+test('The folder summary names the top-most selected folders and counts a partly selected subtree', () => {
+    assert.equal(M.folderSummary(tree, null), 'All');
+    assert.equal(M.folderSummary(tree, { include: ['pro'], exclude: [] }), 'Pro');
+    assert.equal(M.folderSummary(tree, { include: ['pro'], exclude: ['planning'] }), 'Pro (2/4)');
+    assert.equal(M.folderSummary(tree, { include: ['pro'], exclude: ['sprint'] }), 'Pro (3/4)');
+    assert.equal(M.folderSummary(tree, { include: ['pro', 'errands'], exclude: [] }), 'Errands, Pro');
+    assert.equal(M.folderSummary(tree, { include: ['sprint'], exclude: [] }), 'Sprint');
+});
+test('The bar count follows the Today folder filter but ignores the other panel filters', () => {
+    const tasks = [task('a', { project_id: 'planning' }), task('b', { project_id: 'errands' }), task('c', { project_id: 'sprint', priority: 4 }), task('d', { project_id: 'planning', responsible_uid: 'other' })];
+    assert.equal(M.todayCount(tasks, tree, 'me', today, null), 3);
+    assert.equal(M.todayCount(tasks, tree, 'me', today, { include: ['pro'], exclude: [] }), 2);
+    assert.equal(M.todayCount(tasks, tree, 'me', today, { include: ['pro'], exclude: ['planning'] }), 0);
+});
+test('Without a folder selection the Inbox tab still shows the inbox project, whatever the other projects hold', () => {
+    const projectsWithInbox = [{ id: 'inbox', name: 'Inbox', inbox_project: true }, ...tree];
+    const tasks = [task('in', { project_id: 'inbox' }), task('elsewhere', { project_id: 'planning' })];
+    const rows = view => M.viewRows(tasks, projectsWithInbox, [], { ...M.DEFAULT_VIEW, ...view }, 'inbox', 'me', today);
+    assert.deepEqual(plain(rows({}).filter(r => r.task).map(r => r.task.id)), ['in']);
+    assert.deepEqual(plain(rows({ folder: { include: [], exclude: [] } }).filter(r => r.task).map(r => r.task.id)), ['in']);
+    assert.deepEqual(plain(rows({ folder: { include: ['inbox'], exclude: [] } }).filter(r => r.task).map(r => r.task.id)), ['in']);
+});

@@ -118,7 +118,8 @@ The layout follows Todoist’s [Quick Add design comparison](https://www.todoist
 - Use the display button for grouping and sorting. **Smart** follows date/time → priority → deadline → manual order.
 - Project grouping uses the task's own project, with its section shown on the task row. Label grouping lists a task under each of its labels.
 - Today includes overdue tasks. Upcoming includes all scheduled tasks, grouped by date. The default assignee filter is **Me and unassigned**.
-- The bar number counts today's and overdue tasks assigned to you or unassigned, independent of panel filters.
+- The **Folder** filter in the display menu is a dropdown checklist of your projects, indented by level. Checking a folder checks all its subfolders, and you can uncheck any of them or check several siblings. Subprojects created later join a checked folder automatically. Each tab keeps its own selection on this machine, so a work laptop can show only work folders. A parent shows a dash when only part of its subtree is checked. The filter narrows what a tab already lists: Today and Upcoming only contain dated tasks, so a folder without any appears empty there. Uncheck everything to show all projects again.
+- The bar number counts today's and overdue tasks assigned to you or unassigned, and follows Today's Folder filter. Other panel filters do not affect it.
 - **Ctrl+Tab / Ctrl+Shift+Tab** switches tabs. **Tab** moves between controls. **Escape** closes the current editor, menu, or panel.
 - Middle-click the bar widget, or use **Display → Refresh**, to refresh immediately. Background sync runs every minute.
 
