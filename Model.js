@@ -67,6 +67,7 @@ function assigned(task) { return String(task.responsible_uid || task.assignee_id
 function active(task) { return !task.checked && !task.is_completed && !task.is_deleted; }
 function inView(task, view, today, projects) {
     if (!active(task)) return false;
+    if (view === "all") return true;
     var day = scheduledDay(task), project = projects[String(task.project_id)] || {};
     if (view === "inbox") return !!(project.inbox_project || project.is_inbox_project);
     if (view === "today") return !!day && day <= today;
