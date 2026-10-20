@@ -107,7 +107,7 @@ Panel {
         anchorItem: root; owner: root; bar: root.bar
         open: root.opened && root.service !== null
         focusTarget: taskList
-        contentWidth: fittedContentWidth(Style.space(root.service ? root.service.panelWidth : 420))
+        contentWidth: fittedContentWidth(Style.space(root.service ? root.service.panelWidth : 460))
         contentHeight: fittedContentHeight(taskList.preferredHeight, Style.space(root.service ? root.service.panelHeight : 560))
         Tasks.TaskList {
             id: taskList

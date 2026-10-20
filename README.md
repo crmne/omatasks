@@ -148,7 +148,7 @@ The layout follows Todoist’s [Quick Add design comparison](https://www.todoist
 
 </details>
 
-Screenshots use sample tasks. Panel size defaults to **420 × 560px** and is
+Screenshots use sample tasks. Panel size defaults to **460 × 560px** and is
 adjustable in Settings; shorter lists shrink to fit.
 
 Only the active-task list is implemented. Calendar, board, completed-task history, and comment editing are outside this version.
