@@ -64,8 +64,10 @@ ShellRoot {
             var widths = [460, service.panelWidth];
             for (var w = 0; w < widths.length; w++) {
                 taskList.anchors.fill = null; taskList.height = 500; taskList.width = Style.space(widths[w]); wait(100);
+                var header = findChild(taskList, "viewTabs");
                 var total = 0;
                 for (var i = 0; i < taskList.viewTabs.length; i++) { var t = tab(taskList.viewTabs[i]); total += t.implicitWidth; }
+                verify(total + Style.space(28) * 2 + header.spacing * 5 <= header.width, "Tab labels and controls do not fit at " + widths[w]);
                 for (var j = 0; j < taskList.viewTabs.length; j++) {  var b = tab(taskList.viewTabs[j]); verify(b.width >= b.implicitWidth, b.objectName + " is truncated at " + widths[w] + ": " + b.width + " < " + b.implicitWidth); }
             }
         }

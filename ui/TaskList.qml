@@ -125,7 +125,8 @@ FocusScope {
     RowLayout {
         id: header
         anchors.top: parent.top; width: parent.width
-        height: Style.space(28); spacing: Style.space(4)
+        objectName: "viewTabs"
+        height: Style.space(28); spacing: Style.space(2)
         Repeater {
             model: [{id: "today", title: "Today"}, {id: "inbox", title: "Inbox"}, {id: "upcoming", title: "Upcoming"}, {id: "all", title: "All"}]
             Action { fontFamily: root.fontFamily;
@@ -134,6 +135,7 @@ FocusScope {
                 Layout.fillWidth: true
                 Layout.preferredWidth: implicitWidth
                 Layout.minimumWidth: 0
+                iconSize: Style.space(14)
                 text: modelData.title
                 iconName: modelData.id
                 iconDay: root.service.now.getDate()
