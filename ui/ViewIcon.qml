@@ -19,6 +19,8 @@ Item {
             if (root.name === "inbox") {
                 c.beginPath(); c.moveTo(5, 3); c.lineTo(19, 3); c.lineTo(22, 18); c.lineTo(21, 21); c.lineTo(3, 21); c.lineTo(2, 18); c.closePath(); c.stroke();
                 c.beginPath(); c.moveTo(3, 14); c.lineTo(8, 14); c.lineTo(10, 17); c.lineTo(14, 17); c.lineTo(16, 14); c.lineTo(21, 14); c.stroke();
+            } else if (root.name === "all") {
+                for (var line = 6; line <= 18; line += 6) { c.beginPath(); c.arc(5, line, 1, 0, Math.PI * 2); c.fill(); c.beginPath(); c.moveTo(10, line); c.lineTo(21, line); c.stroke(); }
             } else if (root.name === "display") {
                 c.strokeRect(4, 3, 16, 18);
                 for (var row = 7; row <= 17; row += 5) { c.beginPath(); c.moveTo(8, row); c.lineTo(16, row); c.stroke(); }

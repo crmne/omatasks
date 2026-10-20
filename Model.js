@@ -1,5 +1,6 @@
 // Pure data transformations; also exercised by node --test.
 var DEFAULT_VIEW = { grouping: "none", sorting: "smart", assignee: "mine", priority: "all", label: "all", deadline: "all" };
+var VIEW_DEFAULTS = { all: { grouping: "project" } };
 var API_BASE = "https://api.todoist.com/api/v1";
 var TOKEN_URL = "https://app.todoist.com/app/settings/integrations/developer";
 
@@ -67,6 +68,7 @@ function assigned(task) { return String(task.responsible_uid || task.assignee_id
 function active(task) { return !task.checked && !task.is_completed && !task.is_deleted; }
 function inView(task, view, today, projects) {
     if (!active(task)) return false;
+    if (view === "all") return true;
     var day = scheduledDay(task), project = projects[String(task.project_id)] || {};
     if (view === "inbox") return !!(project.inbox_project || project.is_inbox_project);
     if (view === "today") return !!day && day <= today;
@@ -86,8 +88,10 @@ function matches(task, options, userId, today) {
     return true;
 }
 function compareText(a, b) { return String(a || "").localeCompare(String(b || "")); }
+// Inbox and All order tasks as siblings of their project; Today and Upcoming use Todoist's day order.
+function usesSiblingOrder(view) { return view === "inbox" || view === "all"; }
 function manualCompare(a, b, view) {
-    if (view !== "inbox") {
+    if (!usesSiblingOrder(view)) {
         var ao = a.day_order >= 0 ? a.day_order : 1e12, bo = b.day_order >= 0 ? b.day_order : 1e12;
         if (ao !== bo) return ao - bo;
     }

@@ -5,7 +5,7 @@
   "version": "1.3.0",
   "author": "Carmine Paolino",
   "license": "MIT",
-  "description": "Todoist in the Omarchy bar: Today, Inbox and Upcoming, rich Quick Add, task editing, multi-selection, bulk actions, and drag-to-reorder synced through the API.",
+  "description": "Todoist in the Omarchy bar: Today, Inbox, Upcoming and All, rich Quick Add, task editing, multi-selection, bulk actions, and drag-to-reorder synced through the API.",
   "kinds": [
     "service",
     "bar-widget",
@@ -19,7 +19,7 @@
   },
   "barWidget": {
     "displayName": "OmaTasks for Todoist",
-    "description": "Today, Inbox and Upcoming, with task details, grouping and quick add.",
+    "description": "Today, Inbox, Upcoming and All, with task details, grouping and quick add.",
     "category": "Productivity",
     "aliases": [
       "todoist",
