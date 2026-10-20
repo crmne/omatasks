@@ -8,7 +8,7 @@ function siblings(a, b) {
 }
 function canDrop(source, target, view) {
     return source && target && source.kind === "task" && target.kind === "task" &&
-        source.groupKey === target.groupKey && (view !== "inbox" || siblings(source.task, target.task));
+        source.groupKey === target.groupKey && (!Model.usesSiblingOrder(view) || siblings(source.task, target.task));
 }
 function changedOrder(rows, sourceIndex, targetIndex, after, view) {
     var source = rows[sourceIndex], target = rows[targetIndex];
@@ -28,12 +28,12 @@ function plan(tasks, rows, view, sourceId, targetId, after, groupKey) {
     if (!ids) return null;
     var source = rows[sourceIndex].task, byId = Model.byId(tasks), included = {};
     ids.forEach(function(id) { included[id] = true; });
-    var scope = tasks.filter(function(t) { return Model.active(t) && (view === "inbox" ? siblings(source, t) : !!Model.scheduledDay(t)); });
+    var scope = tasks.filter(function(t) { return Model.active(t) && (Model.usesSiblingOrder(view) ? siblings(source, t) : !!Model.scheduledDay(t)); });
     scope = Model.sortTasks(scope, "manual", view, {}, {});
     var cursor = 0;
     var desired = scope.map(function(t) { return included[String(t.id)] ? byId[ids[cursor++]] : t; });
     var patches = {}, commands = [];
-    if (view !== "inbox") {
+    if (!Model.usesSiblingOrder(view)) {
         var orders = {};
         desired.forEach(function(t, index) {
             if (t.day_order !== index) { orders[t.id] = index; patches[t.id] = {day_order: index}; }
