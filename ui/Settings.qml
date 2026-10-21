@@ -34,11 +34,11 @@ ColumnLayout {
                 Layout.preferredWidth: Style.space(190)
                 showLabel: false; fontFamily: root.fontFamily
                 value: root.service.barMode
-                options: [{value: "soon", label: "Task when it is due"}, {value: "next", label: "Today’s next task"}, {value: "count", label: "Today’s count"}, {value: "icon", label: "Icon only"}]
+                options: [{value: "task", label: "Next task"}, {value: "count", label: "Today’s count"}, {value: "icon", label: "Icon only"}]
                 onChanged: function(value) { root.service.setBarMode(value); }
             }
         }
-        Label { font.family: root.fontFamily; Layout.fillWidth: true; text: root.service.barMode === "next" ? "Today’s next timed task, or today’s count when none is left." : "A timed task appears 15 minutes before its time and stays until it ends, or for 30 minutes without a duration. Otherwise the bar shows today’s count."; font.pixelSize: Style.font.bodySmall; opacity: 0.5; wrapMode: Text.WordWrap; elide: Text.ElideNone; visible: root.service.barMode === "soon" || root.service.barMode === "next" }
+        Label { font.family: root.fontFamily; Layout.fillWidth: true; text: "Today’s next timed task: one due now first, then one you are late on. Today’s count once none is left."; font.pixelSize: Style.font.bodySmall; opacity: 0.5; wrapMode: Text.WordWrap; elide: Text.ElideNone; visible: root.service.barMode === "task" }
     }
     Rectangle { visible: root.service.configured; Layout.fillWidth: true; height: 1; color: Commons.Color.popups.text; opacity: 0.12 }
     ColumnLayout {

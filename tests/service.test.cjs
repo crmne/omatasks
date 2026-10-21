@@ -382,10 +382,10 @@ test('Notification settings are saved with the view preferences', () => {
 });
 test('The bar mode is saved with the view preferences and rejects unknown modes', () => {
     const {s} = service();
-    s.setBarMode('next');
-    assert.equal(s.preferences.barTask, 'next');
+    s.setBarMode('count');
+    assert.equal(s.preferences.barTask, 'count');
     s.setBarMode('everything');
-    assert.equal(s.preferences.barTask, 'next');
+    assert.equal(s.preferences.barTask, 'count');
 });
 test('Toggling the panel opens it on the focused monitor, or closes every open one', () => {
     const {s} = service();

@@ -1,16 +1,16 @@
 .import "../Model.js" as Model
 
-// What the bar shows beside the Todoist icon. "soon" names a timed task from
-// a little before its time until it ends, "next" always names today's next
-// timed task, and both fall back to today's count; "count" keeps the count
-// and "icon" shows the icon alone.
-var MODES = ["soon", "next", "count", "icon"];
+// What the bar shows beside the Todoist icon. "task" names what to do next
+// among today's timed tasks and falls back to today's count once none is
+// left; "count" keeps the count and "icon" shows the icon alone.
+var MODES = ["task", "count", "icon"];
 var LEAD_MS = 15 * 60000;
 // How long a task without a duration stays in the bar after its time.
 var OPEN_MS = 30 * 60000;
 var TITLE_LIMIT = 28;
 
-function mode(value) { return MODES.indexOf(value) >= 0 ? value : "soon"; }
+// "soon" and "next" were earlier names for what "task" now does.
+function mode(value) { return MODES.indexOf(value) >= 0 ? value : "task"; }
 function mine(task, userId) { return Model.active(task) && Model.matches(task, Model.DEFAULT_VIEW, userId, ""); }
 function span(task) {
     var due = Model.dueTime(task);
@@ -20,18 +20,20 @@ function span(task) {
 }
 
 // The timed tasks to name now: one starting within the lead first, then one
-// under way, ending soonest first.
+// under way, ending soonest first, then today's that are late, oldest first.
+// With none of those, today's next timed task.
 function selection(barMode, tasks, userId, nowMs) {
-    if (barMode !== "soon" && barMode !== "next") return [];
+    if (barMode !== "task") return [];
     var open = [], today = Model.dateKey(new Date(nowMs)), next = null;
     tasks.forEach(function(task) {
         var s = mine(task, userId) ? span(task) : null;
         if (!s) return;
         if (nowMs >= s.start - LEAD_MS && nowMs < s.end) open.push({task: task, span: s, rank: s.start > nowMs ? 1 : 2, order: s.start > nowMs ? s.start : s.end});
+        else if (nowMs >= s.end && Model.dateKey(new Date(s.start)) === today) open.push({task: task, span: s, rank: 3, order: s.start});
         else if (s.start > nowMs && Model.dateKey(new Date(s.start)) === today && (!next || s.start < next.span.start)) next = {task: task, span: s};
     });
     open.sort(function(a, b) { return a.rank - b.rank || a.order - b.order; });
-    if (open.length === 0 && barMode === "next" && next) return [next];
+    if (open.length === 0 && next) return [next];
     return open;
 }
 
@@ -41,7 +43,13 @@ function when(entry, nowMs) {
         var minutes = Math.round((s.start - nowMs) / 60000);
         return minutes <= 0 ? "now" : minutes < 60 ? "in " + minutes + "m" : "at " + Model.clockText(new Date(s.start));
     }
+    if (nowMs >= s.end) return late(nowMs - s.start);
     return s.timed ? "until " + Model.clockText(new Date(s.end)) : "now";
+}
+// "35m late", "2h late", "1h 30m late"
+function late(ms) {
+    var minutes = Math.floor(ms / 60000), hours = Math.floor(minutes / 60), rest = minutes % 60;
+    return (hours ? hours + "h" + (rest ? " " + rest + "m" : "") : rest + "m") + " late";
 }
 // "Call Ana · in 12m  +1"
 function label(list, nowMs) {
