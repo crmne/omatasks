@@ -55,3 +55,13 @@ test('A late task stays until done or the day ends, behind anything due now', ()
     assert.equal(shown('task', tasks, at(14, 15)), 'Tweet about the survey · 2h 15m late  +1');
     assert.equal(shown('task', [timed('Yesterday', 12, 0, { due: { date: '2026-10-20T12:00:00' } })], at(9)), '');
 });
+
+test('The gap runs from this section to the nearest one toward the middle', () => {
+    const boxes = [{ region: 'left', left: 8, right: 300 }, { region: 'center', left: 900, right: 1100 }, { region: 'right', left: 1300, right: 1912 }];
+    assert.equal(B.sectionGap('right', boxes), 200);
+    assert.equal(B.sectionGap('left', boxes), 600);
+    assert.equal(B.sectionGap('center', boxes), Infinity);
+    assert.equal(B.sectionGap('right', [{ region: 'center', left: 900, right: 1350 }, { region: 'right', left: 1300, right: 1912 }]), -50);
+    assert.equal(B.sectionGap('right', [{ region: 'right', left: 1300, right: 1912 }]), Infinity);
+    assert.equal(B.label([], 0), '');
+});

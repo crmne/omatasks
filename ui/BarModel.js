@@ -51,14 +51,36 @@ function late(ms) {
     var minutes = Math.floor(ms / 60000), hours = Math.floor(minutes / 60), rest = minutes % 60;
     return (hours ? hours + "h" + (rest ? " " + rest + "m" : "") : rest + "m") + " late";
 }
+// The bar shortens the title further, or drops it, when space runs out.
+function title(list) {
+    if (!list || list.length === 0) return "";
+    var text = Model.plain(list[0].task.content);
+    return text.length > TITLE_LIMIT ? text.substr(0, TITLE_LIMIT - 1).replace(/\s+$/, "") + "…" : text;
+}
+// "in 12m  +1"
+function detail(list, nowMs) {
+    if (!list || list.length === 0) return "";
+    return when(list[0], nowMs) + (list.length > 1 ? "  +" + (list.length - 1) : "");
+}
 // "Call Ana · in 12m  +1"
 function label(list, nowMs) {
-    if (!list || list.length === 0) return "";
-    var title = Model.plain(list[0].task.content);
-    if (title.length > TITLE_LIMIT) title = title.substr(0, TITLE_LIMIT - 1).replace(/\s+$/, "") + "…";
-    var text = title + " · " + when(list[0], nowMs);
-    return list.length > 1 ? text + "  +" + (list.length - 1) : text;
+    return list && list.length ? title(list) + " · " + detail(list, nowMs) : "";
 }
 function tooltip(list, nowMs) {
     return list.map(function(entry) { return Model.plain(entry.task.content) + " · " + when(entry, nowMs); }).join("\n");
+}
+
+// The free width between this widget's section and the next section toward
+// the bar's middle, from each module list's {region, left, right}. Negative
+// when they already overlap; unlimited in the centre section.
+function sectionGap(region, boxes) {
+    var mine = boxes.filter(function(b) { return b.region === region; });
+    var others = boxes.filter(function(b) { return b.region !== region; });
+    if (mine.length === 0 || others.length === 0 || (region !== "left" && region !== "right")) return Infinity;
+    if (region === "right") {
+        var start = Math.min.apply(null, mine.map(function(b) { return b.left; }));
+        return start - Math.max.apply(null, others.map(function(b) { return b.right; }));
+    }
+    var end = Math.max.apply(null, mine.map(function(b) { return b.right; }));
+    return Math.min.apply(null, others.map(function(b) { return b.left; })) - end;
 }

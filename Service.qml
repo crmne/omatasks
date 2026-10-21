@@ -52,6 +52,8 @@ Item {
     readonly property string barMode: Bar.mode(preferences.barTask)
     readonly property var barTasks: loaded ? Bar.selection(barMode, tasks, user.id, now.getTime()) : []
     readonly property string barText: Bar.label(barTasks, now.getTime())
+    readonly property string barTitle: Bar.title(barTasks)
+    readonly property string barDetail: Bar.detail(barTasks, now.getTime())
     readonly property var notifySettings: Notify.settings(preferences)
     readonly property bool notifying: enableNotifications && configured && notifySettings.enabled
     readonly property string notifierPath: decodeURIComponent(Qt.resolvedUrl("Notifier.py").toString().replace(/^file:\/\//, ""))
