@@ -122,6 +122,9 @@ The layout follows Todoist’s [Quick Add design comparison](https://www.todoist
 - Today includes overdue tasks. Upcoming includes all scheduled tasks, grouped by date. The default assignee filter is **Me and unassigned**.
 - The bar number counts today's and overdue tasks assigned to you or unassigned, independent of panel filters.
 - The bar also names what to do next among today's timed tasks: one starting within 15 minutes or under way ("Call Ana · in 12m", "· until 10:30"), then one you are late on ("· 1h 30m late"), otherwise the next one today ("· at 14:30"). "+1" means another task is due now or late. Hover for the full names. When the bar is too narrow, the name is shortened, then left out ("in 12m"), so the task never runs into the next part of the bar. Once no timed task is left today, the bar shows the number. Change this under **Settings → In the bar**: **Today's count** keeps only the number, and **Icon only** hides it. A vertical bar shows the number.
+
+  <img src="screenshots/bar.png" alt="The bar naming the next task: Review the homepage designs, at 10:00" width="420">
+
 - **Ctrl+Tab / Ctrl+Shift+Tab** switches tabs. **Tab** moves between controls. **Escape** closes the current editor, menu, or panel.
 - Middle-click the bar widget, or use **Display → Refresh**, to refresh immediately. Background sync runs every minute.
 - Open the panel or Quick Add from a key or a script with `omarchy-shell crmne.todoist`:
@@ -155,6 +158,8 @@ Only the active-task list is implemented. Calendar, board, completed-task histor
 OmaTasks announces your tasks on the desktop from the tasks it already syncs,
 so notifications need no extra requests to Todoist. Choose what you get under
 **Settings → Notifications**.
+
+<img src="screenshots/notification-settings.png" alt="Notification settings: switches for reminders, task times, deadline warnings and the morning recap, the recap time, and repeat for overdue tasks" width="456">
 
 - **Reminders.** The reminders set on a task in Todoist, before its time or at
   a fixed time. Reminders marked urgent stay on screen until dismissed.

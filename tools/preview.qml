@@ -65,7 +65,7 @@ ShellRoot {
                 anchors.right: parent.right; anchors.rightMargin: 22
                 spacing: 7
                 Tasks.TodoistIcon { width: 16; height: 16; color: Commons.Color.foreground }
-                Tasks.Label { text: String(service.todayCount); font.pixelSize: 13 }
+                Text { text: service.barText; color: Commons.Color.foreground; font.family: Style.font.family; font.pixelSize: 13 }
             }
             Rectangle {
                 id: panel
@@ -102,6 +102,32 @@ ShellRoot {
                 text: "Review the launch plan tomorrow at 10am p2 #Studio @next"
             }
         }
+        }
+    }
+    FloatingWindow {
+        id: extrasWindow
+        visible: false
+        implicitWidth: 520; implicitHeight: 1000
+        color: Commons.Color.popups.background
+        // The bar: the next task named beside the Todoist icon.
+        Rectangle {
+            id: barStrip
+            width: 420; height: 30
+            color: Commons.Color.background
+            Row {
+                anchors.centerIn: parent
+                spacing: 7
+                Tasks.TodoistIcon { width: 15; height: 15; color: Commons.Color.foreground; anchors.verticalCenter: parent.verticalCenter }
+                Text { text: service.barText; color: Commons.Color.foreground; font.family: Style.font.family; font.pixelSize: 13; anchors.verticalCenter: parent.verticalCenter }
+            }
+        }
+        Rectangle {
+            id: settingsCard
+            y: 40
+            width: 456; height: notificationSettings.implicitHeight + 36
+            color: Commons.Color.popups.background; radius: Style.cornerRadius
+            border.color: Commons.Color.popups.border; border.width: 1
+            Tasks.Settings { id: notificationSettings; x: 18; y: 18; width: parent.width - 36; service: service }
         }
     }
     FloatingWindow {
@@ -160,7 +186,12 @@ ShellRoot {
                 capture.findChild(selectionList, "taskContextMenu").contentItem.parent.parent = selectionCanvas;
             }
             if (phase === 13) selectionCanvas.grabToImage(function(result) { result.saveToFile(dir + "/screenshots/multi-selection.png"); });
-            if (phase === 14) Qt.quit();
+            if (phase === 14) { selectionWindow.visible = false; extrasWindow.visible = true; }
+            if (phase === 15) {
+                barStrip.grabToImage(function(result) { result.saveToFile(dir + "/screenshots/bar.png"); });
+                settingsCard.grabToImage(function(result) { result.saveToFile(dir + "/screenshots/notification-settings.png"); });
+            }
+            if (phase === 16) Qt.quit();
         }
     }
 }
