@@ -82,6 +82,10 @@ Item {
         var widget = widgets.filter(function(w) { return w.QsWindow.window && w.QsWindow.window.screen.name === name; })[0] || widgets[0];
         if (widget) widget.open();
     }
+    function quickAdd() {
+        closePanels();
+        if (shell) shell.summon(manifest && manifest.id ? manifest.id : "crmne.todoist", "{}");
+    }
     function togglePanel() { if (widgets.some(function(w) { return w.opened; })) closePanels(); else openPanel(); }
     function viewOptions(view) { return Object.assign({}, Model.DEFAULT_VIEW, preferences[view] || {}); }
     function setOption(view, key, value) {
@@ -456,11 +460,16 @@ Item {
         }
         onSaveFailed: root.error = "Could not save the display preferences."
     }
+    // The commands every Omarchy panel answers to, and Quick Add. `shell
+    // toggle crmne.todoist` reaches the Quick Add overlay, not the panel.
     IpcHandler {
         target: "crmne.todoist"
         function open(): void { root.openPanel(); }
         function close(): void { root.closePanels(); }
+        function show(): void { root.openPanel(); }
+        function hide(): void { root.closePanels(); }
         function toggle(): void { root.togglePanel(); }
+        function quickAdd(): void { root.quickAdd(); }
     }
     ShortcutManager { id: shortcuts; service: root; enabled: root.enableShortcuts && root.preferencesLoaded }
     Process {

@@ -397,3 +397,13 @@ test('Toggling the panel opens it on the focused monitor, or closes every open o
     s.togglePanel();
     assert.deepEqual(s.widgets.map(w => w.opened), [false, false]);
 });
+test('Quick Add from a command closes the panel and opens the overlay', () => {
+    const {s} = service();
+    const panel = {opened: true, close() { this.opened = false; }};
+    s.widgets = [panel];
+    s.manifest = {id: 'crmne.todoist'};
+    s.shell = {summon(id, payload) { s.summoned = [id, payload]; }};
+    s.quickAdd();
+    assert.equal(panel.opened, false);
+    assert.deepEqual(s.summoned, ['crmne.todoist', '{}']);
+});
