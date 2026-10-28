@@ -26,6 +26,7 @@ FocusScope {
     property real dragY: 0
     property real dropY: 0
     readonly property bool dragging: dragIndex >= 0
+    readonly property var viewTabs: ["today", "inbox", "upcoming", "all"]
     readonly property var options: service.viewOptions(view)
     readonly property var rows: dragRows || heldRows || Model.viewRows(service.tasks, service.projects, service.collaborators, options, view, service.user.id, service.now)
     readonly property bool setupVisible: !service.configured || settingsOpen
@@ -110,8 +111,7 @@ FocusScope {
     Keys.onEscapePressed: { if (dragging) cancelDrag(); else if (taskMenu.visible) { if (!taskMenu.busy) taskMenu.close(); } else if (display.opened) display.close(); else if (details.opened && detailLoader.item) detailLoader.item.dismissEditor(); else if (composerKey) composerKey = ""; else if (selectedIds.length) clearSelection(); else if (settingsOpen) settingsOpen = false; else closeRequested(); }
     Keys.onPressed: function(event) {
         if (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_Tab) {
-            var tabs = ["today", "inbox", "upcoming"];
-            if (!dragging) view = tabs[(tabs.indexOf(view) + (event.modifiers & Qt.ShiftModifier ? 2 : 1)) % 3]; event.accepted = true;
+            if (!dragging) view = viewTabs[(viewTabs.indexOf(view) + (event.modifiers & Qt.ShiftModifier ? viewTabs.length - 1 : 1)) % viewTabs.length]; event.accepted = true;
         }
         if (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_A && !dragging && !composerKey && !details.visible && !display.visible && !taskMenu.visible && !setupVisible) {
             selectedIds = Bulk.visibleIds(rows); event.accepted = true;
@@ -125,14 +125,17 @@ FocusScope {
     RowLayout {
         id: header
         anchors.top: parent.top; width: parent.width
-        height: Style.space(28); spacing: Style.space(4)
+        objectName: "viewTabs"
+        height: Style.space(28); spacing: Style.space(2)
         Repeater {
-            model: [{id: "today", title: "Today"}, {id: "inbox", title: "Inbox"}, {id: "upcoming", title: "Upcoming"}]
+            model: [{id: "today", title: "Today"}, {id: "inbox", title: "Inbox"}, {id: "upcoming", title: "Upcoming"}, {id: "all", title: "All"}]
             Action { fontFamily: root.fontFamily;
                 required property var modelData
+                objectName: "viewTab_" + modelData.id
                 Layout.fillWidth: true
-                Layout.preferredWidth: 0
+                Layout.preferredWidth: implicitWidth
                 Layout.minimumWidth: 0
+                iconSize: Style.space(14)
                 text: modelData.title
                 iconName: modelData.id
                 iconDay: root.service.now.getDate()

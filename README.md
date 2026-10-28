@@ -4,7 +4,7 @@ Your Todoist day in the Omarchy bar, with a native Quick Add a shortcut away.
 
 ![OmaTasks for Todoist: the Today panel and Quick Add](preview.png)
 
-**Today · Inbox · Upcoming · Quick Add · Edit · Multi-select · Drag to reorder · Notifications**
+**Today · Inbox · Upcoming · All · Quick Add · Edit · Multi-select · Drag to reorder · Notifications**
 
 A compact list that puts your tasks first. Open the bar panel to plan your day,
 complete a task, or change its details. Press **Alt+Space** to capture something
@@ -116,11 +116,11 @@ The layout follows Todoist’s [Quick Add design comparison](https://www.todoist
 - Complete tasks and subtasks from the detail popup, or choose **Edit** to change the title, description, project/section, date/recurrence, priority, labels, assignee, deadline, duration, and reminders. **Save** writes the changes; **Cancel** discards the draft. Only changed fields are sent, preserving existing schedules when you edit other fields. Deadlines accept Today, Tomorrow, Next week, or YYYY-MM-DD.
 - The detail popup links to the parent task, individual subtasks, and comments in Todoist when present.
 - Drag a task up or down to reorder it. The insertion line shows where it will land; hold near the top or bottom to scroll. **Escape** or dropping outside cancels. A successful drop selects **Manual** sorting for that tab and saves the order through Todoist's API. Failed saves restore the previous order and show an error.
-- Reordering stays within the displayed group. In Inbox it also stays within the same section and parent task. Filters preserve hidden tasks' positions. Today/Upcoming use Todoist's day order; Inbox uses project sibling order. Other clients show the saved order with **Manual** sorting in the corresponding view; their display preferences remain independent.
+- Reordering stays within the displayed group. In Inbox it also stays within the same section and parent task. Filters preserve hidden tasks' positions. Today/Upcoming use Todoist's day order; Inbox and All use project sibling order, never the day order. Other clients show the saved order with **Manual** sorting in the corresponding view; their display preferences remain independent.
 - Use the display button for grouping and sorting. **Smart** follows date/time → priority → deadline → manual order.
 - Project grouping uses the task's own project, with its section shown on the task row. Label grouping lists a task under each of its labels.
-- Today includes overdue tasks. Upcoming includes all scheduled tasks, grouped by date. The default assignee filter is **Me and unassigned**.
-- The bar number counts today's and overdue tasks assigned to you or unassigned, independent of panel filters.
+- Today includes overdue tasks. Upcoming includes all scheduled tasks, grouped by date. **All** lists every active task, dated or not, grouped by project by default, so tasks without a date outside Inbox have a place; adding a task there sets no date. The default assignee filter is **Me and unassigned**.
+- The bar number counts today's and overdue tasks assigned to you or unassigned, independent of panel filters. The All tab does not affect it.
 - The bar also names what to do next among today's timed tasks: one starting within 15 minutes or under way ("Call Ana · in 12m", "· until 10:30"), then one you are late on ("· 1h 30m late"), otherwise the next one today ("· at 14:30"). "+1" means another task is due now or late. Hover for the full names. When the bar is too narrow, the name is shortened, then left out ("in 12m"), so the task never runs into the next part of the bar. Once no timed task is left today, the bar shows the number. Change this under **Settings → In the bar**: **Today's count** keeps only the number, and **Icon only** hides it. A vertical bar shows the number.
 
   <img src="screenshots/bar.png" alt="The bar naming the next task: Review the homepage designs, at 10:00" width="420">
@@ -148,7 +148,7 @@ The layout follows Todoist’s [Quick Add design comparison](https://www.todoist
 
 </details>
 
-Screenshots use sample tasks. Panel size defaults to **420 × 560px** and is
+Screenshots use sample tasks. Panel size defaults to **460 × 560px** and is
 adjustable in Settings; shorter lists shrink to fit.
 
 Only the active-task list is implemented. Calendar, board, completed-task history, and comment editing are outside this version.
@@ -219,6 +219,7 @@ retains a cached QML component, run `omarchy restart shell`.
 node --test tests/*.test.cjs
 ./tests/check-drag
 ./tests/check-composer
+./tests/check-all
 omarchy plugin validate .
 ```
 

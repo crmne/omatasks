@@ -54,6 +54,18 @@ test('Missing keys are initialized without losing sibling or day ordering', () =
     assert.ok(plan.commands.every(c => c.type === 'item_update'));
     assert.ok(!plan.patches.child);
 });
+test('All orders by sibling keys, never by day order, and a drag writes only the moved task key', () => {
+    const tasks = ['a', 'b', 'c'].map((id, i) => task(id, {project_id: 'work', due: i === 1 ? null : {date: '2026-09-15'}, order_key: 'a' + i, day_order: 2 - i}));
+    assert.deepEqual(order(tasks, 'all'), ['a', 'b', 'c']);
+    const plan = O.plan(tasks, rows(tasks, 'all'), 'all', 'c', 'a', false, '');
+    assert.deepEqual(plain(plan.commands.map(c => [c.type, c.args.id])), [['item_update', 'c']]);
+    assert.ok(!('day_order' in plan.commands[0].args) && !('day_order' in plan.patches.c));
+    assert.deepEqual(order(O.apply(tasks, plan.patches), 'all'), ['c', 'a', 'b']);
+});
+test('All never reorders across projects, sections or parents', () => {
+    const tasks = [task('a', {project_id: 'work', order_key: 'a0'}), task('other', {project_id: 'inbox', order_key: 'a1'}), task('child', {project_id: 'work', parent_id: 'a', order_key: 'a2'}), task('section', {project_id: 'work', section_id: 's', order_key: 'a3'})];
+    for (const target of ['other', 'child', 'section']) assert.equal(O.plan(tasks, rows(tasks, 'all'), 'all', 'a', target, true, ''), null);
+});
 test('No-op, stale tasks, cross-group and cross-parent drops never produce writes', () => {
     const tasks = [task('a', {day_order: 0}), task('b', {day_order: 1}), task('child', {parent_id: 'a'}), task('section', {section_id: 's'}), task('future', {due: {date: '2026-09-16'}})];
     assert.equal(O.plan(tasks, rows(tasks), 'today', 'a', 'b', false, ''), null);
