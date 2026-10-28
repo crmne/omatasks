@@ -144,6 +144,14 @@ function viewRows(tasks, projectList, collaborators, options, view, userId, now)
     return rows;
 }
 function uuid() { return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) { var r = Math.random() * 16 | 0; return (c === "x" ? r : (r & 3 | 8)).toString(16); }); }
+var TOO_LARGE_MESSAGE = "Todoist sent more data than OmaTasks reads at once (16 MB). Try again later.";
+// Fetch.py answers with one JSON status line, then the response body.
+function fetchResult(output) {
+    var text = String(output || ""), split = text.indexOf("\n"), meta = null;
+    try { meta = JSON.parse(split < 0 ? text : text.slice(0, split)); } catch (e) { meta = null; }
+    if (!meta || typeof meta !== "object") return {status: 0, retryAfter: "", error: "", body: ""};
+    return {status: Number(meta.status) || 0, retryAfter: String(meta.retryAfter || ""), error: String(meta.error || ""), body: split < 0 ? "" : text.slice(split + 1)};
+}
 function errorMessage(status) {
     if (status === 401 || status === 403) return "Todoist could not authorize this request. Check your API token in Settings.";
     if (status === 429) return "Todoist is receiving too many requests. Please wait a moment.";

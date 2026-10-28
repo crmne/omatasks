@@ -56,6 +56,7 @@ Item {
     readonly property string barDetail: Bar.detail(barTasks, now.getTime())
     readonly property var notifySettings: Notify.settings(preferences)
     readonly property bool notifying: enableNotifications && configured && notifySettings.enabled
+    readonly property string fetcherPath: decodeURIComponent(Qt.resolvedUrl("Fetch.py").toString().replace(/^file:\/\//, ""))
     readonly property string notifierPath: decodeURIComponent(Qt.resolvedUrl("Notifier.py").toString().replace(/^file:\/\//, ""))
     // The bar uses a terminal font. Task text follows the desktop's UI font.
     readonly property string fontFamily: Qt.application.font.family
@@ -133,7 +134,7 @@ Item {
         nextSyncRetry = 0;
         generation++;
         var old = requests; requests = [];
-        old.forEach(function(r) { r.xhr.abort(); });
+        old.forEach(function(r) { r.abort(); });
         loading = false; saving = false; connecting = false;
         if (pendingReorder) finishReorder(false);
     }
@@ -165,36 +166,46 @@ Item {
         credentialWriter.pendingToken = "";
         credentialWriter.running = true;
     }
+    // Fetch.py makes the request in its own process and stops reading at
+    // 16 MiB (LIMIT in Fetch.py), so a hostile or broken endpoint cannot fill the
+    // shell's memory. The token reaches it on stdin, never in arguments.
     function request(method, path, body, credential, callback, requestId) {
-        var xhr = new XMLHttpRequest(), epoch = generation;
-        var entry = {xhr: xhr, started: Date.now(), done: false};
+        var epoch = generation;
+        var entry = {started: Date.now(), done: false, process: null};
+        function stop() {
+            var process = entry.process; entry.process = null;
+            if (process) { process.running = false; process.destroy(); }
+        }
         function finish(data, message, status) {
             if (entry.done) return;
             entry.done = true;
             requests = requests.filter(function(r) { return r !== entry; });
+            stop();
             if (epoch === generation) callback(data, message, status);
         }
-        entry.timeout = function() { finish(null, Model.errorMessage(0), 0); xhr.abort(); };
+        entry.abort = function() { entry.done = true; stop(); };
+        entry.timeout = function() { finish(null, Model.errorMessage(0), 0); };
         requests = requests.concat([entry]);
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState !== XMLHttpRequest.DONE || epoch !== generation) return;
-            if (xhr.status < 200 || xhr.status >= 300) {
-                if (xhr.status === 429) root.retryAfter = Date.now() + Math.max(60, Number(xhr.getResponseHeader("Retry-After")) || 60) * 1000;
-                finish(null, Model.errorMessage(xhr.status), xhr.status); return;
-            }
-            try { var data = xhr.responseText ? JSON.parse(xhr.responseText) : {}; }
-            catch (e) { finish(null, "Todoist returned an unreadable response. Try refreshing.", 502); return; }
-            finish(data, "");
-        };
-        xhr.open(method, Model.API_BASE + path);
-        xhr.setRequestHeader("Authorization", "Bearer " + credential);
-        xhr.setRequestHeader("Content-Type", path === "/sync" ? "application/x-www-form-urlencoded" : "application/json");
-        if (requestId) xhr.setRequestHeader("X-Request-Id", requestId);
         var payload = body === null ? "" : JSON.stringify(body);
         if (path === "/sync") payload = Object.keys(body).map(function(key) {
             return encodeURIComponent(key) + "=" + encodeURIComponent(typeof body[key] === "string" ? body[key] : JSON.stringify(body[key]));
         }).join("&");
-        xhr.send(payload);
+        var input = JSON.stringify({method: method, url: Model.API_BASE + path, token: credential, requestId: requestId || "",
+            contentType: path === "/sync" ? "application/x-www-form-urlencoded" : "application/json", body: payload});
+        entry.process = fetchProcess.createObject(root, {input: input});
+        entry.process.answered.connect(function(output) {
+            if (entry.done || epoch !== generation) return;
+            var result = Model.fetchResult(output);
+            if (result.error === "too-large") { finish(null, Model.TOO_LARGE_MESSAGE, 502); return; }
+            if (result.status < 200 || result.status >= 300) {
+                if (result.status === 429) root.retryAfter = Date.now() + Math.max(60, Number(result.retryAfter) || 60) * 1000;
+                finish(null, Model.errorMessage(result.status), result.status); return;
+            }
+            try { var data = result.body ? JSON.parse(result.body) : {}; }
+            catch (e) { finish(null, "Todoist returned an unreadable response. Try refreshing.", 502); return; }
+            finish(data, "");
+        });
+        entry.process.running = true;
     }
     function ingest(data) {
         var full = data.full_sync === true;
@@ -486,6 +497,19 @@ Item {
             if (code !== 0) { root.error = "Could not save the API token. Please try again."; pendingToken = ""; return; }
             root.applyToken(pendingToken); pendingToken = "";
             root.connected();
+        }
+    }
+    Component {
+        id: fetchProcess
+        Process {
+            id: fetcher
+            property string input: ""
+            signal answered(string output)
+            command: ["/usr/bin/python3", root.fetcherPath]
+            stdinEnabled: true
+            // Fetch.py prints one status line and at most 16 MiB of body.
+            stdout: StdioCollector { onStreamFinished: fetcher.answered(text) }
+            onStarted: { write(input); stdinEnabled = false; }
         }
     }
     Process {

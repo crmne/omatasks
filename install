@@ -15,7 +15,8 @@ mkdir -p "$todoist_target"
 cp -r "$todoist_source/manifest.json" "$todoist_source/Model.js" \
   "$todoist_source/Service.qml" "$todoist_source/BarWidget.qml" \
   "$todoist_source/ShortcutManager.qml" "$todoist_source/ShortcutModel.js" \
-  "$todoist_source/QuickAdd.qml" "$todoist_source/Notifier.py" "$todoist_source/ui" \
+  "$todoist_source/QuickAdd.qml" "$todoist_source/Notifier.py" "$todoist_source/Fetch.py" \
+  "$todoist_source/ui" \
   "$todoist_source/README.md" "$todoist_source/LICENSE" "$todoist_target/"
 omarchy-shell shell rescanPlugins
 omarchy plugin enable crmne.todoist --section right

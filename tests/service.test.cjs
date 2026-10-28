@@ -1,4 +1,4 @@
-// Run the service's JavaScript methods with controlled XMLHttpRequest responses.
+// Run the service's JavaScript methods with controlled Fetch.py responses.
 // Rendering and FileView/Process behavior are checked separately in Quickshell.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -7,16 +7,22 @@ const vm = require('node:vm');
 
 function service() {
     const wires = [];
-    class XHR {
-        static DONE = 4;
-        constructor() { this.headers = {}; wires.push(this); }
-        open(method, url) { this.method = method; this.url = url; }
-        setRequestHeader(key, value) { this.headers[key] = value; }
-        getResponseHeader(key) { return this.responseHeaders?.[key] || ''; }
-        send(body) { this.body = body; }
-        abort() { this.aborted = true; this.respond(0, ''); }
-        respond(status, body, headers = {}) { this.status = status; this.responseText = typeof body === 'string' ? body : JSON.stringify(body); this.responseHeaders = headers; this.readyState = 4; this.onreadystatechange(); }
-    }
+    // Stands in for a Fetch.py process: it reads the request the service
+    // writes to stdin and answers in Fetch.py's output format.
+    const fetchProcess = { createObject(parent, props) {
+        const listeners = [];
+        const request = JSON.parse(props.input);
+        const wire = { input: props.input, method: request.method, url: request.url, body: request.body,
+            headers: { Authorization: 'Bearer ' + request.token, 'Content-Type': request.contentType, ...(request.requestId ? { 'X-Request-Id': request.requestId } : {}) },
+            answered: { connect(fn) { listeners.push(fn); } },
+            set running(value) { if (value) { this.started = true; wires.push(this); } else if (this.started && !this.exited) { this.aborted = true; this.output(''); } },
+            destroy() { this.destroyed = true; },
+            output(text) { this.exited = true; listeners.forEach(fn => fn(text)); },
+            respond(status, body, headers = {}) {
+                this.output(JSON.stringify({ status, retryAfter: headers['Retry-After'] || '' }) + '\n' + (typeof body === 'string' ? body : JSON.stringify(body)));
+            } };
+        return wire;
+    } };
     const Model = vm.createContext({ Date });
     vm.runInContext(fs.readFileSync('Model.js', 'utf8'), Model);
     const Fractional = vm.createContext({});
@@ -27,7 +33,7 @@ function service() {
     vm.runInContext(fs.readFileSync('ui/EditModel.js', 'utf8'), Edit);
     const Bulk = vm.createContext({ Model, Edit, Date });
     vm.runInContext(fs.readFileSync('ui/BulkModel.js', 'utf8').replace(/^\.import.*$/gm, ''), Bulk);
-    const ctx = vm.createContext({ Order, preferences: {}, now: new Date(2026, 8, 15, 12), pendingReorder: null, reorderCache: {}, settingsFile: { setText() {} }, Model, XMLHttpRequest: XHR, Date, requests: [], completionIds: {}, generation: 0, token: 'test-token', configured: true, loading: false, saving: false, connecting: false, storageReady: true, error: '', retryAfter: 0, nextSyncRetry: 0, syncFailures: 0, syncToken: '*', tasks: [], projects: [], sections: [], labels: [], collaborators: [], reminders: [], completedInfo: [], user: {}, lastSync: 0, taskAdded() { ctx.added = true; }, taskUpdated(id) { ctx.updated = id; }, taskCompleted(id) { ctx.completed = id; }, operationFailed(message) { ctx.failed = message; } });
+    const ctx = vm.createContext({ Order, preferences: {}, now: new Date(2026, 8, 15, 12), pendingReorder: null, reorderCache: {}, settingsFile: { setText() {} }, Model, fetchProcess, Date, requests: [], completionIds: {}, generation: 0, token: 'test-token', configured: true, loading: false, saving: false, connecting: false, storageReady: true, error: '', retryAfter: 0, nextSyncRetry: 0, syncFailures: 0, syncToken: '*', tasks: [], projects: [], sections: [], labels: [], collaborators: [], reminders: [], completedInfo: [], user: {}, lastSync: 0, taskAdded() { ctx.added = true; }, taskUpdated(id) { ctx.updated = id; }, taskCompleted(id) { ctx.completed = id; }, operationFailed(message) { ctx.failed = message; } });
     ctx.root = ctx;
     const Bar = vm.createContext({ Model, Date });
     vm.runInContext(fs.readFileSync('ui/BarModel.js', 'utf8').replace(/^\.import.*$/gm, ''), Bar);
@@ -406,4 +412,37 @@ test('Quick Add from a command closes the panel and opens the overlay', () => {
     s.quickAdd();
     assert.equal(panel.opened, false);
     assert.deepEqual(s.summoned, ['crmne.todoist', '{}']);
+});
+
+test('A response over Fetch.py’s cap fails the sync, keeps cached tasks and backs off', () => {
+    const {s, wires} = service();
+    s.tasks = [{id: 'cached'}];
+    s.refresh();
+    wires[0].output(JSON.stringify({status: 0, error: 'too-large'}) + '\n');
+    assert.equal(s.loading, false);
+    assert.equal(s.tasks[0].id, 'cached');
+    assert.match(s.error, /more data than OmaTasks reads at once/);
+    assert.ok(s.nextSyncRetry > 0);
+    assert.equal(wires[0].destroyed, true);
+    assert.equal(s.requests.length, 0);
+});
+
+test('Requests go through Fetch.py with the token on stdin, never in its command', () => {
+    const {s, wires} = service();
+    s.refresh();
+    const request = JSON.parse(wires[0].input);
+    assert.equal(request.token, 'test-token');
+    assert.equal(request.url, 'https://api.todoist.com/api/v1/sync');
+    const source = fs.readFileSync('Service.qml', 'utf8');
+    assert.doesNotMatch(source, /XMLHttpRequest/);
+    const command = source.match(/id: fetchProcess[\s\S]*?command: (\[.*\])/)[1];
+    assert.equal(command, '["/usr/bin/python3", root.fetcherPath]');
+});
+
+test('Fetch.py output parsing tolerates empty, malformed and body-less answers', () => {
+    const {s} = service();
+    assert.equal(s.Model.fetchResult('').status, 0);
+    assert.equal(s.Model.fetchResult('garbage\n{}').status, 0);
+    assert.deepEqual(JSON.parse(JSON.stringify(s.Model.fetchResult('{"status":200,"retryAfter":""}\n{"a":"b\\nc"}'))), {status: 200, retryAfter: '', error: '', body: '{"a":"b\\nc"}'});
+    assert.equal(s.Model.fetchResult('{"status":503}').body, '');
 });
