@@ -1,5 +1,5 @@
 // Pure data transformations; also exercised by node --test.
-var DEFAULT_VIEW = { grouping: "none", sorting: "smart", assignee: "mine", priority: "all", label: "all", deadline: "all" };
+var DEFAULT_VIEW = { grouping: "none", sorting: "smart", assignee: "mine", priority: "all", label: "all", deadline: "all", folder: null };
 var API_BASE = "https://api.todoist.com/api/v1";
 var TOKEN_URL = "https://app.todoist.com/app/settings/integrations/developer";
 
@@ -55,6 +55,65 @@ function projectPath(id, projects, sectionId, sections) {
     var project = projects[String(id)], section = sections ? sections[String(sectionId)] : null;
     return (project ? project.name : "Inbox") + (section ? " / " + section.name : "");
 }
+function folderRank(project) { return project.order_key || String(project.child_order || 0).padStart(8, "0"); }
+// Projects in Todoist order, each directly after its parent, so a parent always precedes its descendants.
+function folderTree(projectList) {
+    var list = asArray(projectList), known = byId(list), children = {}, nodes = [];
+    list.forEach(function(p) {
+        var parent = p.parent_id && known[String(p.parent_id)] ? String(p.parent_id) : "";
+        (children[parent] = children[parent] || []).push(p);
+    });
+    (function walk(parent, depth, path) {
+        (children[parent] || []).sort(function(a, b) { return compareText(folderRank(a), folderRank(b)); }).forEach(function(p) {
+            nodes.push({id: String(p.id), name: p.name, depth: depth, parentId: parent, path: path});
+            walk(String(p.id), depth + 1, path ? path + " / " + p.name : p.name);
+        });
+    })("", 0, "");
+    return nodes;
+}
+// A folder selection is {include, exclude}: each project inherits the mark of its nearest marked ancestor.
+function folderSelected(nodes, folder) {
+    var include = (folder && folder.include) || [], exclude = (folder && folder.exclude) || [], selected = {};
+    nodes.forEach(function(n) {
+        selected[n.id] = include.indexOf(n.id) >= 0 ? true : exclude.indexOf(n.id) >= 0 ? false : !!selected[n.parentId];
+    });
+    return selected;
+}
+function folderIds(projectList, folder) {
+    var selected = folderSelected(folderTree(projectList), folder), ids = {}, any = false;
+    Object.keys(selected).forEach(function(id) { if (selected[id]) { ids[id] = true; any = true; } });
+    return any ? ids : null;
+}
+function folderSubtree(nodes, id) {
+    var start = nodes.findIndex(function(n) { return n.id === id; }), ids = [];
+    for (var i = start; start >= 0 && i < nodes.length && (i === start || nodes[i].depth > nodes[start].depth); i++) ids.push(nodes[i].id);
+    return ids;
+}
+function folderState(projectList, folder, id) {
+    var nodes = folderTree(projectList), selected = folderSelected(nodes, folder), subtree = folderSubtree(nodes, id);
+    var chosen = subtree.filter(function(x) { return selected[x]; }).length;
+    return chosen === 0 ? "unchecked" : chosen === subtree.length ? "checked" : "partial";
+}
+function toggleFolder(projectList, folder, id) {
+    var nodes = folderTree(projectList), subtree = folderSubtree(nodes, id), outside = function(x) { return subtree.indexOf(x) < 0; };
+    var next = {include: ((folder && folder.include) || []).filter(outside), exclude: ((folder && folder.exclude) || []).filter(outside)};
+    if (!subtree.length) return next;
+    var parentId = nodes.find(function(n) { return n.id === id; }).parentId, check = folderState(projectList, folder, id) !== "checked";
+    if (check !== !!folderSelected(nodes, next)[parentId]) (check ? next.include : next.exclude).push(id);
+    return next;
+}
+function folderValues(projectList, folder) {
+    var selected = folderSelected(folderTree(projectList), folder);
+    return Object.keys(selected).filter(function(id) { return selected[id]; });
+}
+function folderSummary(projectList, folder) {
+    var nodes = folderTree(projectList), selected = folderSelected(nodes, folder);
+    var names = nodes.filter(function(n) { return selected[n.id] && !selected[n.parentId]; }).map(function(n) {
+        var subtree = folderSubtree(nodes, n.id), chosen = subtree.filter(function(id) { return selected[id]; }).length;
+        return n.name + (chosen < subtree.length ? " (" + chosen + "/" + subtree.length + ")" : "");
+    });
+    return names.length ? names.join(", ") : "All";
+}
 function mergeCompleted(previous, updates, full) {
     var map = {};
     (full ? [] : asArray(previous)).concat(asArray(updates)).forEach(function(x) {
@@ -72,8 +131,9 @@ function inView(task, view, today, projects) {
     if (view === "today") return !!day && day <= today;
     return !!day; // Upcoming includes every scheduled task, with overdue first.
 }
-function matches(task, options, userId, today) {
+function matches(task, options, userId, today, folders) {
     var who = assigned(task);
+    if (folders && !folders[String(task.project_id)]) return false;
     if (options.assignee === "mine" && who && who !== String(userId)) return false;
     if (options.assignee === "me" && who !== String(userId)) return false;
     if (options.assignee === "unassigned" && who) return false;
@@ -111,7 +171,8 @@ function sortTasks(tasks, mode, view, projects, people) {
 }
 function viewRows(tasks, projectList, collaborators, options, view, userId, now) {
     var projects = byId(projectList), people = byId(collaborators), today = dateKey(now);
-    var selected = tasks.filter(function(t) { return inView(t, view, today, projects) && matches(t, options, userId, today); });
+    var folders = folderIds(projectList, options.folder);
+    var selected = tasks.filter(function(t) { return inView(t, view, today, projects) && matches(t, options, userId, today, folders); });
     selected = sortTasks(selected, options.sorting, view, projects, people);
     var groups = {}, keys = [];
     var hasOverdue = view === "today" && selected.some(function(t) { return scheduledDay(t) < today; });
@@ -142,6 +203,10 @@ function viewRows(tasks, projectList, collaborators, options, view, userId, now)
     });
     if (options.grouping !== "project" || !keys.length) rows.push({kind: "add", key: "add", projectId: ""});
     return rows;
+}
+function todayCount(tasks, projectList, userId, now, folder) {
+    var projects = byId(projectList), today = dateKey(now), folders = folderIds(projectList, folder);
+    return tasks.filter(function(t) { return inView(t, "today", today, projects) && matches(t, DEFAULT_VIEW, userId, today, folders); }).length;
 }
 function uuid() { return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) { var r = Math.random() * 16 | 0; return (c === "x" ? r : (r & 3 | 8)).toString(16); }); }
 var TOO_LARGE_MESSAGE = "Todoist sent more data than OmaTasks reads at once (16 MB). Try again later.";
