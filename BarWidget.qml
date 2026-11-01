@@ -3,12 +3,17 @@ import qs.Commons
 import qs.Ui
 import "ui" as Tasks
 import "ui/BarModel.js" as Bar
+import "Bridge.js" as Bridge
 
 Panel {
     id: root
     moduleName: "crmne.todoist"
     ipcTarget: ""
-    readonly property var service: bar && bar.shell ? bar.shell.serviceFor(moduleName) : null
+    readonly property var directService: bar && bar.shell && typeof bar.shell.serviceFor === "function" ? bar.shell.serviceFor(moduleName) : null
+    // A replacement bar's shell has no serviceFor, so read the published service instead.
+    property var bridgedService: null
+    readonly property var service: directService || bridgedService
+    Timer { interval: 1000; running: !root.directService; repeat: true; triggeredOnStart: true; onTriggered: root.bridgedService = Bridge.current() }
     implicitWidth: button.implicitWidth
     implicitHeight: button.implicitHeight
     onServiceChanged: if (service) service.registerWidget(root)
