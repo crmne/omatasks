@@ -56,6 +56,12 @@ function reorderFixture() {
     s.tasks = ['a', 'b', 'c'].map((id, i) => ({id, content: id, project_id: 'inbox', priority: 1, day_order: i, order_key: 'a' + i, due: {date: '2026-09-15'}}));
     return fixture;
 }
+// A read gets a second attempt; let both time out.
+function timeOutTwice(s) {
+    s.requests[0].timeout();
+    s.requests[0].tick(Date.now() + 2000);
+    s.requests[0].timeout();
+}
 const commandsOf = request => JSON.parse(new URLSearchParams(request.body).get('commands'));
 test('Reordering is optimistic, cancels stale sync, persists day order and switches to Manual', () => {
     const {s, wires} = reorderFixture();
@@ -174,7 +180,7 @@ test('Rate limits back off; timeouts release loading state', () => {
     s.refresh(); wires[0].respond(429, {}, { 'Retry-After': '120' });
     s.refresh(); assert.equal(wires.length, 1);
     s.retryAfter = 0;
-    s.refresh(true); s.requests[0].timeout();
+    s.refresh(true); timeOutTwice(s);
     assert.equal(s.loading, false);
     assert.ok(s.error.includes('connection'));
 });
@@ -311,22 +317,23 @@ test('Transient sync failures back off to five minutes, preserve tasks and recov
 test('Manual retry bypasses sync backoff, but respects server rate limits', () => {
     const {s, wires} = service();
     s.refresh(); wires[0].respond(0, '');
-    s.refresh(true); assert.equal(wires.length, 2);
-    wires[1].respond(429, {}, {'Retry-After': '120'});
+    s.requests[0].tick(Date.now() + 2000); wires[1].respond(0, '');
+    s.refresh(true); assert.equal(wires.length, 3);
+    wires[2].respond(429, {}, {'Retry-After': '120'});
     assert.equal(s.nextSyncRetry, s.retryAfter);
-    s.refresh(true); assert.equal(wires.length, 2);
+    s.refresh(true); assert.equal(wires.length, 3);
 });
 
 test('Timeout retries ignore late responses and account changes discard scheduled retries', () => {
     const {s, wires} = service();
-    s.refresh(); s.requests[0].timeout();
+    s.refresh(); timeOutTwice(s);
     const scheduled = s.nextSyncRetry;
     assert.ok(scheduled > Date.now());
     wires[0].respond(200, {sync_token: 'late', items: [{id: 'late'}]});
     assert.equal(s.syncToken, '*'); assert.equal(s.nextSyncRetry, scheduled);
     s.applyToken('replacement');
     assert.equal(s.nextSyncRetry, 0); assert.equal(s.syncFailures, 0);
-    assert.equal(wires[1].headers.Authorization, 'Bearer replacement');
+    assert.equal(wires[2].headers.Authorization, 'Bearer replacement');
 });
 
 test('Authorization failures do not schedule transient retries; malformed sync responses do', () => {
@@ -425,6 +432,82 @@ test('A response over Fetch.py’s cap fails the sync, keeps cached tasks and ba
     assert.ok(s.nextSyncRetry > 0);
     assert.equal(wires[0].destroyed, true);
     assert.equal(s.requests.length, 0);
+});
+
+test('A failed sync tries once more on a new helper before showing an error', () => {
+    const {s, wires} = service();
+    s.refresh();
+    wires[0].output(JSON.stringify({status: 0, error: 'network'}));
+    assert.equal(s.error, ''); assert.equal(s.loading, true);
+    s.requests[0].tick(Date.now());
+    assert.equal(wires.length, 1);
+    s.requests[0].tick(Date.now() + 2000);
+    assert.equal(wires.length, 2);
+    assert.equal(wires[1].input, wires[0].input);
+    wires[0].respond(200, {sync_token: 'late'});
+    assert.equal(s.syncToken, '*');
+    wires[1].respond(200, {sync_token: 'fresh'});
+    assert.equal(s.syncToken, 'fresh'); assert.equal(s.error, ''); assert.equal(s.syncFailures, 0);
+});
+
+test('A sync that stalls is replaced by a new helper instead of failing', () => {
+    const {s, wires} = service();
+    s.refresh();
+    s.requests[0].tick(Date.now() + 21000);
+    assert.equal(wires[0].aborted, true); assert.equal(s.error, '');
+    s.requests[0].tick(Date.now() + 2000);
+    assert.equal(wires.length, 2);
+    s.requests[0].tick(Date.now() + 5000);
+    assert.equal(wires.length, 2);
+});
+
+test('A sync that fails twice reports the error once and backs off', () => {
+    const {s, wires} = service();
+    s.refresh();
+    wires[0].output(JSON.stringify({status: 0, error: 'unreachable'}));
+    s.requests[0].tick(Date.now() + 2000);
+    wires[1].output(JSON.stringify({status: 0, error: 'unreachable'}));
+    assert.equal(wires.length, 2); assert.equal(s.requests.length, 0);
+    assert.equal(s.syncFailures, 1); assert.ok(s.error.includes('Retrying automatically'));
+});
+
+test('A write that may have arrived is never sent again by the service', () => {
+    const task = {id: 'a', content: 'a'};
+    for (const start of [s => s.completeTask(task), s => s.addTask('new', 'stable-id'),
+        s => s.updateTask('a', [{uuid: 'u', type: 'item_update', args: {id: 'a'}}])]) {
+        for (const failure of [{status: 0, error: 'network'}, {status: 0, error: 'timeout'}, null]) {
+            const {s, wires} = service();
+            start(s);
+            if (failure) wires[0].output(JSON.stringify(failure)); else s.requests[0].timeout();
+            assert.equal(s.requests.length, 0);
+            assert.equal(s.saving, false);
+            assert.ok(s.failed.includes('Could not reach Todoist'));
+            assert.equal(wires.length, 1);
+        }
+    }
+});
+
+test('A write that never left is sent once more with the same identity', () => {
+    const {s, wires} = service();
+    s.completeTask({id: 'a', content: 'a'});
+    wires[0].output(JSON.stringify({status: 0, error: 'unreachable'}));
+    assert.equal(s.saving, true); assert.equal(s.failed, undefined);
+    s.requests[0].tick(Date.now() + 2000);
+    assert.equal(wires[1].input, wires[0].input);
+    assert.ok(wires[1].headers['X-Request-Id']);
+    wires[1].respond(200, {});
+    assert.equal(s.completed, 'a'); assert.equal(wires.length, 3); // the follow-up sync
+});
+
+test('Starting a write cancels a read waiting for its second attempt', () => {
+    const {s, wires} = service();
+    s.refresh();
+    wires[0].output(JSON.stringify({status: 0, error: 'network'}));
+    const waiting = s.requests[0];
+    s.addTask('new', 'stable-id');
+    waiting.tick(Date.now() + 2000);
+    assert.equal(wires.length, 2);
+    assert.ok(wires[1].url.endsWith('/tasks/quick'));
 });
 
 test('Requests go through Fetch.py with the token on stdin, never in its command', () => {

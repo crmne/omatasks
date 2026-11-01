@@ -19,9 +19,9 @@ function serve(handler) {
     });
 }
 
-function fetch(request, raw) {
+function fetch(request, raw, args = ['Fetch.py']) {
     return new Promise(resolve => {
-        const child = spawn('python3', ['Fetch.py'], { stdio: ['pipe', 'pipe', 'pipe'] });
+        const child = spawn('python3', args, { stdio: ['pipe', 'pipe', 'pipe'] });
         const out = [], err = [];
         child.stdout.on('data', chunk => out.push(chunk));
         child.stderr.on('data', chunk => err.push(chunk));
@@ -107,9 +107,53 @@ test('Fetch.py answers status 0 without details when the network fails or the re
     const { server, base } = await serve(() => {});
     server.close();
     const failed = await fetch({ url: base + '/sync' });
-    assert.deepEqual(failed.meta, { status: 0, error: 'network' });
+    assert.deepEqual(failed.meta, { status: 0, error: 'unreachable' });
     assert.equal(failed.stderr, '');
     assert.doesNotMatch(JSON.stringify(failed), /secret-token/);
     assert.deepEqual((await fetch(null, 'not json')).meta, { status: 0, error: 'request' });
     assert.deepEqual((await fetch(null, '[]')).meta, { status: 0, error: 'request' });
+});
+
+// Runs Fetch.py with a resolver answering `addresses`, where connecting to any
+// address but 127.0.0.1 hangs, as on a dead path, and logs each attempt to stderr.
+function deadPaths(addresses) {
+    return ['-c', `
+import runpy, socket, sys
+real = socket.socket.connect
+def connect(self, target):
+    print(target[0], self.gettimeout(), file=sys.stderr)
+    if target[0] == '127.0.0.1':
+        return real(self, target)
+    raise TimeoutError
+socket.socket.connect = connect
+socket.getaddrinfo = lambda host, port, **_: [
+    (socket.AF_INET6 if ':' in a else socket.AF_INET, socket.SOCK_STREAM, 6, '', (a, port)) for a in ${JSON.stringify(addresses)}]
+runpy.run_path('Fetch.py', run_name='__main__')
+`];
+}
+
+test('Fetch.py reaches IPv4 past a dead IPv6 path that lists many addresses', async () => {
+    const { server, seen, base } = await serve((req, res) => { res.end('{"sync_token":"next"}'); });
+    try {
+        const url = base.replace('127.0.0.1', 'api.test') + '/sync';
+        const result = await fetch({ url }, undefined, deadPaths(['::1', '::2', '::3', '::4', '::5', '127.0.0.1']));
+        assert.equal(result.meta.status, 200);
+        assert.equal(seen.length, 1);
+        assert.deepEqual(result.stderr.trim().split('\n'), ['::1 4.0', '127.0.0.1 4.0']);
+    } finally { server.close(); }
+});
+
+test('Fetch.py gives up within the deadline when no address answers, and says nothing was sent', async () => {
+    const addresses = Array.from({ length: 8 }, (_, i) => '::' + (i + 1));
+    const result = await fetch({ url: 'http://api.test:1/sync' }, undefined, deadPaths(addresses));
+    assert.deepEqual(result.meta, { status: 0, error: 'unreachable' });
+    assert.equal(result.stderr.trim().split('\n').length, 4);
+});
+
+test('Fetch.py does not call a request unsent once the connection was made', async () => {
+    const { server, base } = await serve((req, res) => { res.destroy(); });
+    try {
+        const result = await fetch({ url: base + '/tasks/1/close', requestId: 'stable-id' });
+        assert.deepEqual(result.meta, { status: 0, error: 'network' });
+    } finally { server.close(); }
 });

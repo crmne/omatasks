@@ -193,7 +193,13 @@ morning's recap, and clears those records after two days.
 OmaTasks talks only to `https://api.todoist.com`. Each request runs in a short
 `Fetch.py` process that receives the request and token on its standard input,
 never its command line or environment, does not follow redirects, and gives up
-after 20 seconds. It reads at most 16 MB of each response and then stops, so a
+after 20 seconds. Every request opens its own connection, so a connection left
+dead by suspend, a Wi-Fi drop or a VPN change cannot block later ones, and when
+one address does not answer within 4 seconds it moves on, alternating between
+IPv6 and IPv4. A failed sync is repeated once before any error is shown. A
+change is repeated only if it provably never left the machine: if it may have
+reached Todoist, you see the error and retrying uses the same request ID, so
+nothing is applied twice. It reads at most 16 MB of each response and then stops, so a
 broken or compromised server cannot fill the shell's memory; a larger answer is
 reported as an error and the sync retries later. Task data stays in memory.
 
@@ -222,7 +228,7 @@ node --test tests/*.test.cjs
 omarchy plugin validate .
 ```
 
-Tests cover task selection, Smart/manual order, nested groups, time zones, incremental sync, request cancellation, recurring completion, retry IDs, and error handling. Reorder tests cover filtered tasks, duplicate label groups, sibling boundaries, fractional keys, batching, rollback, and retries. Text field tests cover editing, word deletion, selection, line wrapping, surrogate pairs, and clipboard cleaning, and fail if any QML file uses a Qt text input or reads the clipboard outside an explicit paste. Quick Add tests cover token boundaries, scoped pickers, escaped names, description serialization, and date precedence. Edit tests cover preserving recurring schedules, optional-field removal, project moves, deadline validation, reminder syntax, partial Sync failures, and retries. The service tests run its JavaScript methods with controlled HTTP responses; they do not modify a Todoist account. Request helper tests run `Fetch.py` against a local server and check the 16 MB response cap, an endless response, redirects, rate limits, and that failures print no request details. UI and credential-file behavior are checked in Quickshell.
+Tests cover task selection, Smart/manual order, nested groups, time zones, incremental sync, request cancellation, recurring completion, retry IDs, and error handling. Reorder tests cover filtered tasks, duplicate label groups, sibling boundaries, fractional keys, batching, rollback, and retries. Text field tests cover editing, word deletion, selection, line wrapping, surrogate pairs, and clipboard cleaning, and fail if any QML file uses a Qt text input or reads the clipboard outside an explicit paste. Quick Add tests cover token boundaries, scoped pickers, escaped names, description serialization, and date precedence. Edit tests cover preserving recurring schedules, optional-field removal, project moves, deadline validation, reminder syntax, partial Sync failures, and retries. The service tests run its JavaScript methods with controlled HTTP responses; they do not modify a Todoist account. Request helper tests run `Fetch.py` against a local server and check the 16 MB response cap, an endless response, redirects, rate limits, moving past addresses that do not answer, and that failures print no request details. UI and credential-file behavior are checked in Quickshell.
 
 Implementation follows the [Todoist API v1 documentation](https://developer.todoist.com/api/v1/): form-encoded incremental Sync, JSON Quick Add, and the task close endpoint. The app's display preferences are local to this plugin.
 

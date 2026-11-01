@@ -169,9 +169,16 @@ Item {
     // Fetch.py makes the request in its own process and stops reading at
     // 16 MiB (LIMIT in Fetch.py), so a hostile or broken endpoint cannot fill the
     // shell's memory. The token reaches it on stdin, never in arguments.
+    //
+    // Each attempt is a new process and so a new connection. A failed attempt
+    // is repeated once if that cannot change anything twice: a read, or a
+    // write that Fetch.py reports as never sent. Any other write may have
+    // arrived, so it fails, and retrying it is left to the person, with the
+    // same request ID.
     function request(method, path, body, credential, callback, requestId) {
         var epoch = generation;
-        var entry = {started: Date.now(), done: false, process: null};
+        var entry = {started: Date.now(), done: false, process: null, retried: false, retryAt: 0};
+        var read = path === "/sync" && !body.commands;
         function stop() {
             var process = entry.process; entry.process = null;
             if (process) { process.running = false; process.destroy(); }
@@ -184,7 +191,19 @@ Item {
             if (epoch === generation) callback(data, message, status);
         }
         entry.abort = function() { entry.done = true; stop(); };
-        entry.timeout = function() { finish(null, Model.errorMessage(0), 0); };
+        function fail(unsent) {
+            if (entry.done) return;
+            if (entry.retried || !(read || unsent)) { finish(null, Model.errorMessage(0), 0); return; }
+            entry.retried = true;
+            stop();
+            entry.retryAt = Date.now() + 1000;
+        }
+        entry.timeout = function() { fail(false); };
+        entry.tick = function(time) {
+            if (entry.done) return;
+            if (entry.retryAt) { if (time >= entry.retryAt) launch(); }
+            else if (time - entry.started > 20000) entry.timeout();
+        };
         requests = requests.concat([entry]);
         var payload = body === null ? "" : JSON.stringify(body);
         if (path === "/sync") payload = Object.keys(body).map(function(key) {
@@ -192,11 +211,19 @@ Item {
         }).join("&");
         var input = JSON.stringify({method: method, url: Model.API_BASE + path, token: credential, requestId: requestId || "",
             contentType: path === "/sync" ? "application/x-www-form-urlencoded" : "application/json", body: payload});
-        entry.process = fetchProcess.createObject(root, {input: input});
-        entry.process.answered.connect(function(output) {
+        function launch() {
+            entry.retryAt = 0;
+            entry.started = Date.now();
+            var process = fetchProcess.createObject(root, {input: input});
+            entry.process = process;
+            process.answered.connect(function(output) { if (process === entry.process) answered(output); });
+            process.running = true;
+        }
+        function answered(output) {
             if (entry.done || epoch !== generation) return;
             var result = Model.fetchResult(output);
             if (result.error === "too-large") { finish(null, Model.TOO_LARGE_MESSAGE, 502); return; }
+            if (result.status === 0 && result.error !== "request") { fail(result.error === "unreachable"); return; }
             if (result.status < 200 || result.status >= 300) {
                 if (result.status === 429) root.retryAfter = Date.now() + Math.max(60, Number(result.retryAfter) || 60) * 1000;
                 finish(null, Model.errorMessage(result.status), result.status); return;
@@ -204,8 +231,8 @@ Item {
             try { var data = result.body ? JSON.parse(result.body) : {}; }
             catch (e) { finish(null, "Todoist returned an unreadable response. Try refreshing.", 502); return; }
             finish(data, "");
-        });
-        entry.process.running = true;
+        }
+        launch();
     }
     function ingest(data) {
         var full = data.full_sync === true;
@@ -535,6 +562,6 @@ Item {
     }
     Timer {
         interval: 1000; running: root.requests.length > 0; repeat: true
-        onTriggered: root.requests.slice().forEach(function(r) { if (Date.now() - r.started > 20000) r.timeout(); })
+        onTriggered: root.requests.slice().forEach(function(r) { r.tick(Date.now()); })
     }
 }

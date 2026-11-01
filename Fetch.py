@@ -9,7 +9,13 @@
 # because a process's arguments and environment are readable by other
 # processes. The answer is one JSON line ({"status": 200, "retryAfter": ""},
 # or {"status": 0, "error": "too-large"}), then the response body as is.
+#
+# Each request opens its own connection, so a connection stranded by a dropped
+# network or a route change never outlives the request that found it. The
+# error "unreachable" means no connection was made, so nothing was sent.
+import itertools
 import json
+import socket
 import sys
 import time
 import urllib.error
@@ -19,12 +25,53 @@ LIMIT = 16 * 1024 * 1024
 REQUEST_LIMIT = 4 * 1024 * 1024
 DEADLINE = 20
 CHUNK = 65536
+CONNECT_TIMEOUT = 4
+CONNECT_ATTEMPTS = 4
+
+
+class Unreachable(OSError):
+    pass
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     # Never forward the token to another address.
     def redirect_request(self, *args):
         return None
+
+
+def alternate(addresses):
+    first = [a for a in addresses if a[0] == addresses[0][0]]
+    others = [a for a in addresses if a[0] != addresses[0][0]]
+    pairs = itertools.zip_longest(first, others)
+    return [a for pair in pairs for a in pair if a]
+
+
+# A dead IPv6 path swallows connection attempts without an error, and the
+# resolver can list many addresses on it before any IPv4 one. Trying each for
+# the whole deadline would never reach a path that works, so give each a few
+# seconds and alternate between IPv6 and IPv4.
+def connect(address, timeout=None, source_address=None, **_):
+    try:
+        found = socket.getaddrinfo(*address, type=socket.SOCK_STREAM)
+    except OSError as e:
+        raise Unreachable from e
+    for family, kind, protocol, _, target in alternate(found)[:CONNECT_ATTEMPTS]:
+        sock = socket.socket(family, kind, protocol)
+        try:
+            sock.settimeout(CONNECT_TIMEOUT)
+            if source_address:
+                sock.bind(source_address)
+            sock.connect(target)
+        except OSError:
+            sock.close()
+            continue
+        sock.settimeout(timeout)
+        return sock
+    raise Unreachable
+
+
+# http.client looks this up for each connection. This process makes only one.
+socket.create_connection = connect
 
 
 def answer(meta, body=b''):
@@ -52,6 +99,11 @@ def fetch(request):
         answer({'status': e.code, 'retryAfter': e.headers.get('Retry-After') or ''})
         e.close()
         return
+    except urllib.error.URLError as e:
+        if isinstance(e.reason, Unreachable):
+            answer({'status': 0, 'error': 'unreachable'})
+            return
+        raise
     with response:
         status = response.status
         retry = response.headers.get('Retry-After') or ''
