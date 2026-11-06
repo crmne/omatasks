@@ -38,6 +38,7 @@ ColumnLayout {
             UI.Dropdown { Layout.fillWidth: true; showLabel: false; fontFamily: root.fontFamily; value: root.options[modelData.key]; options: modelData.values; onChanged: function(value) { root.service.setOption(root.view, modelData.key, value); } }
         }
     }
+    FolderFilter { Layout.fillWidth: true; service: root.service; view: root.view; fontFamily: root.fontFamily }
     RowLayout {
         Action { fontFamily: root.fontFamily; text: "Reset view"; onClicked: root.service.resetView(root.view) }
         Item { Layout.fillWidth: true }
