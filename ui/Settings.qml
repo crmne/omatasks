@@ -17,7 +17,7 @@ ColumnLayout {
         RowLayout {
             Layout.fillWidth: true
             Label { font.family: root.fontFamily; Layout.fillWidth: true; text: "Width" }
-            SizeControl { font.family: root.fontFamily; value: root.service.panelWidth; from: 360; to: 1000; Accessible.name: "Panel width"; onValueModified: root.service.setPanelSize("panelWidth", value) }
+            SizeControl { font.family: root.fontFamily; value: root.service.panelWidth; from: 440; to: 1000; Accessible.name: "Panel width"; onValueModified: root.service.setPanelSize("panelWidth", value) }
         }
         RowLayout {
             Layout.fillWidth: true

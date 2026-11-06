@@ -43,6 +43,12 @@ test('Upcoming has no arbitrary seven-day cutoff; Inbox also contains undated ta
     assert.equal(M.viewRows(tasks, projects, [], M.DEFAULT_VIEW, 'upcoming', 'me', today).filter(r => r.task)[0].task.id, 'distant');
     assert.equal(M.viewRows(tasks, projects, [], M.DEFAULT_VIEW, 'inbox', 'me', today).filter(r => r.task)[0].task.id, 'inbox');
 });
+test('All lists every active task, dated or not, in any project', () => {
+    const tasks = [task('undated', { due: null }), task('dated'), task('inbox', { due: null, project_id: 'inbox' }), task('nested', { due: null, project_id: 'release' }), task('done', { due: null, checked: true }), task('other', { due: null, responsible_uid: 'other' })];
+    const ids = view => plain(M.viewRows(tasks, projects, [], { ...M.DEFAULT_VIEW, ...view }, 'all', 'me', today).filter(r => r.task).map(r => r.task.id)).sort();
+    assert.deepEqual(ids({}), ['dated', 'inbox', 'nested', 'undated']);
+    assert.deepEqual(ids({ assignee: 'all' }), ['dated', 'inbox', 'nested', 'other', 'undated']);
+});
 test('Incremental sync retains unchanged items, replaces changed items and removes tombstones', () => {
     const merged = M.merge([task('a'), task('b')], [task('a', { content: 'updated' }), { id: 'b', is_deleted: true }, task('c')], false);
     assert.deepEqual(plain(merged.map(t => [t.id, t.content])), [['a', 'updated'], ['c', 'c']]);
