@@ -49,6 +49,7 @@ Item {
         visible: root.name === "today"
         anchors.horizontalCenter: parent.horizontalCenter
         y: parent.height * 0.39
+        textFormat: Text.PlainText
         text: root.day
         color: root.color
         font.family: Qt.application.font.family

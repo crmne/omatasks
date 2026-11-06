@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+todoist_repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+todoist_test_dir=$(mktemp -d /tmp/omatasks-bar.XXXXXX)
+server_pid=
+cleanup() {
+  [[ -z $server_pid ]] || kill "$server_pid" 2>/dev/null || true
+  rm -rf -- "$todoist_test_dir"
+}
+trap cleanup EXIT
+ln -s "${OMARCHY_PATH:-/usr/share/omarchy}/shell/Commons" "$todoist_test_dir/Commons"
+# Offscreen Qt has no layer shell, so the widget's popup window cannot load.
+# Everything else in Ui is the real thing. The test shows the panel in a window.
+mkdir "$todoist_test_dir/Ui"
+ln -s "${OMARCHY_PATH:-/usr/share/omarchy}/shell/Ui/"* "$todoist_test_dir/Ui/"
+rm "$todoist_test_dir/Ui/KeyboardPanel.qml"
+cat > "$todoist_test_dir/Ui/KeyboardPanel.qml" <<'STUB'
+import QtQuick
+Item {
+    visible: false
+    property var anchorItem; property var owner; property var bar; property bool open
+    property var focusTarget; property real contentWidth; property real contentHeight
+    function fittedContentWidth(width) { return width; }
+    function fittedContentHeight(height, limit) { return Math.min(height, limit); }
+}
+STUB
+ln -s "$todoist_repo" "$todoist_test_dir/plugin"
+cp "$todoist_repo/tests/bar.qml" "$todoist_test_dir/shell.qml"
+
+# Logs each path asked for. Only the test's unsafe control may appear.
+python3 -c '
+import http.server, sys
+log = open(sys.argv[1], "a", buffering=1)
+class Handler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        log.write(self.path + "\n")
+        self.send_response(404)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+    def log_message(self, *args):
+        pass
+server = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+with open(sys.argv[2], "w") as f:
+    f.write(str(server.server_address[1]))
+server.serve_forever()
+' "$todoist_test_dir/requests.log" "$todoist_test_dir/port.new" &
+server_pid=$!
+for _ in {1..50}; do
+  [[ -s $todoist_test_dir/port.new ]] && break
+  sleep 0.1
+done
+TODOIST_TEST_PORT=$(<"$todoist_test_dir/port.new")
+
+TODOIST_TEST_PORT="$TODOIST_TEST_PORT" TODOIST_TEST_DIR="$todoist_test_dir" QT_QPA_PLATFORM=offscreen timeout 30s \
+  quickshell -p "$todoist_test_dir" --no-color 2>&1 | tee "$todoist_test_dir/output.log" || true
+touch "$todoist_test_dir/requests.log"
+echo "Image requests seen: $(sort -u "$todoist_test_dir/requests.log" | tr '\n' ' ')"
+rg -q 'BAR UI RESULTS [0-9]+ passed 0 failed' "$todoist_test_dir/output.log"
+if ! rg -q '^/control$' "$todoist_test_dir/requests.log"; then
+  echo "The unsafe control fetched nothing, so this test cannot see a fetch." >&2
+  exit 1
+fi
+if rg -v '^/control$' "$todoist_test_dir/requests.log"; then
+  echo "Synced text made Qt request an image." >&2
+  exit 1
+fi

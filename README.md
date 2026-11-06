@@ -184,7 +184,8 @@ before you were at the computer, or before the shell started, are not
 replayed.
 
 Notifications are sent over D-Bus by `Notifier.py`. Task names reach it through
-its standard input, never its command line. It records what it has shown
+its standard input, never its command line. It escapes the body, which
+notification servers read as markup. It records what it has shown
 in `$XDG_RUNTIME_DIR/omatasks`, so reloading the shell does not repeat this
 morning's recap, and clears those records after two days.
 
@@ -202,6 +203,8 @@ reached Todoist, you see the error and retrying uses the same request ID, so
 nothing is applied twice. It reads at most 16 MB of each response and then stops, so a
 broken or compromised server cannot fill the shell's memory; a larger answer is
 reported as an error and the sync retries later. Task data stays in memory.
+Synced text is always shown as plain text, so a task name cannot load an image
+or anything else from another server.
 
 ## Remove
 
@@ -223,6 +226,7 @@ retains a cached QML component, run `omarchy restart shell`.
 
 ```sh
 node --test tests/*.test.cjs
+./tests/check-bar
 ./tests/check-drag
 ./tests/check-composer
 omarchy plugin validate .
@@ -233,6 +237,8 @@ Tests cover task selection, Smart/manual order, nested groups, time zones, incre
 Implementation follows the [Todoist API v1 documentation](https://developer.todoist.com/api/v1/): form-encoded incremental Sync, JSON Quick Add, and the task close endpoint. The app's display preferences are local to this plugin.
 
 `./tools/render-preview` regenerates the release artwork and screenshots from the real QML components with sample data. It never accesses your account.
+
+`check-bar` runs the bar widget, the panel and the task details offscreen with an image tag in every synced field and a local server, and fails if any of them asks that server for an image. A deliberately unsafe Text in the test proves it would notice.
 
 `check-drag` runs offscreen QML interaction tests using synthetic tasks and intercepted requests. It checks clicks, multi-selection, context menus, bulk actions, deletion confirmation, drops, scrolling, scroll-position retention, and cancellation, without accessing a Todoist account. Bulk service tests cover batching, partial failures, retries, recurring completion, and account changes.
 

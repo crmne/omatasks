@@ -1,6 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const path = require('node:path');
 const vm = require('node:vm');
 const Model = vm.createContext({ Date });
 vm.runInContext(fs.readFileSync('Model.js', 'utf8'), Model);
@@ -64,4 +65,43 @@ test('The gap runs from this section to the nearest one toward the middle', () =
     assert.equal(B.sectionGap('right', [{ region: 'center', left: 900, right: 1350 }, { region: 'right', left: 1300, right: 1912 }]), -50);
     assert.equal(B.sectionGap('right', [{ region: 'right', left: 1300, right: 1912 }]), Infinity);
     assert.equal(B.label([], 0), '');
+});
+
+// The marketplace review found a task name reaching a Text in Qt's default
+// AutoText format, which fetches the image in a name like <img src=...>.
+test('An image tag in a task name stays literal text', () => {
+    const name = '<img src="https://x.io/a">';
+    const list = B.selection('task', [timed(name, 10)], 'me', at(9, 50));
+    assert.equal(B.title(list), name);
+    assert.equal(B.label(list, at(9, 50)), `${name} · in 10m`);
+    assert.equal(B.tooltip(list, at(9, 50)), `${name} · in 10m`);
+});
+
+test('Every Text in the plugin is plain text, so synced text cannot load anything', () => {
+    const files = [];
+    const walk = dir => fs.readdirSync(dir, { withFileTypes: true }).forEach(entry => {
+        const file = path.join(dir, entry.name);
+        if (entry.isDirectory() && !['.git', 'tests', 'node_modules'].includes(entry.name)) walk(file);
+        else if (entry.isFile() && /\.qml$/.test(entry.name)) files.push(file);
+    });
+    walk('.');
+    assert.ok(files.includes('BarWidget.qml'));
+    let found = 0;
+    for (const file of files) {
+        const source = fs.readFileSync(file, 'utf8').replace(/\/\/.*$/gm, '');
+        assert.doesNotMatch(source, /Text\.(?:AutoText|RichText|StyledText|MarkdownText)\b/, file);
+        assert.doesNotMatch(source, /\bonLinkActivated\b/, file);
+        for (const match of source.matchAll(/(?<![\w.])Text\s*\{/g)) {
+            let depth = 1, end = match.index + match[0].length;
+            while (depth > 0 && end < source.length) {
+                if (source[end] === '{') depth++;
+                if (source[end] === '}') depth--;
+                end++;
+            }
+            found++;
+            const line = source.slice(0, match.index).split('\n').length;
+            assert.match(source.slice(match.index, end), /textFormat:\s*Text\.PlainText/, `${file}:${line}`);
+        }
+    }
+    assert.ok(found >= 8, `only ${found} Text items found`);
 });

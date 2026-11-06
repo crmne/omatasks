@@ -84,12 +84,16 @@ Panel {
                     visible: label.stage === "full" || label.stage === "short"
                     width: label.stage === "full" ? implicitWidth : Math.max(0, root.textRoom - separatorMetrics.advanceWidth - detailMetrics.advanceWidth)
                     text: root.service ? root.service.barTitle : ""
+                    // A task name is someone's text, not markup: Qt's default
+                    // AutoText would fetch the image in a name like <img src=...>.
+                    textFormat: Text.PlainText
                     elide: Text.ElideRight
                     font.family: button.fontFamily; font.pixelSize: button.fontSize
                     color: button.foreground
                 }
                 Text {
                     objectName: "barDetail"
+                    textFormat: Text.PlainText
                     text: !root.service ? "" : label.stage === "count" ? root.service.todayCount
                         : (label.stage === "detail" ? "" : separatorMetrics.text) + root.service.barDetail
                     font.family: button.fontFamily; font.pixelSize: button.fontSize

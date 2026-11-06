@@ -65,7 +65,7 @@ ShellRoot {
                 anchors.right: parent.right; anchors.rightMargin: 22
                 spacing: 7
                 Tasks.TodoistIcon { width: 16; height: 16; color: Commons.Color.foreground }
-                Text { text: service.barText; color: Commons.Color.foreground; font.family: Style.font.family; font.pixelSize: 13 }
+                Text { textFormat: Text.PlainText; text: service.barText; color: Commons.Color.foreground; font.family: Style.font.family; font.pixelSize: 13 }
             }
             Rectangle {
                 id: panel
@@ -118,7 +118,7 @@ ShellRoot {
                 anchors.centerIn: parent
                 spacing: 7
                 Tasks.TodoistIcon { width: 15; height: 15; color: Commons.Color.foreground; anchors.verticalCenter: parent.verticalCenter }
-                Text { text: service.barText; color: Commons.Color.foreground; font.family: Style.font.family; font.pixelSize: 13; anchors.verticalCenter: parent.verticalCenter }
+                Text { textFormat: Text.PlainText; text: service.barText; color: Commons.Color.foreground; font.family: Style.font.family; font.pixelSize: 13; anchors.verticalCenter: parent.verticalCenter }
             }
         }
         Rectangle {

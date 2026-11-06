@@ -1,6 +1,9 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 const vm = require('node:vm');
 const Model = vm.createContext({ Date });
 vm.runInContext(fs.readFileSync('Model.js', 'utf8'), Model);
@@ -93,4 +96,51 @@ test('Task notifications lead with how soon the task is', () => {
     assert.equal(N.lead(alert, at(10)), 'Now · 10:00–10:30');
     assert.equal(N.lead(alert, at(11)), 'Overdue since 10:00');
     assert.equal(N.taskBody({ ...alert, kind: 'deadline', today: true }, at(8), 'Work'), 'Deadline today\nWork');
+});
+
+// Runs the real Notifier.py against a stand-in for PyGObject that records the
+// D-Bus call, since notification servers read the body as markup.
+test('Notifier escapes markup in the body and sends the title as plain text', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'omatasks-notifier-'));
+    try {
+        fs.mkdirSync(path.join(dir, 'gi'));
+        fs.writeFileSync(path.join(dir, 'gi', '__init__.py'), '');
+        fs.writeFileSync(path.join(dir, 'gi', 'repository.py'), `
+import html, json, os, sys
+class Variant:
+    def __init__(self, kind, value=None): self.value = value
+class Error(Exception): pass
+class MainLoop:
+    def run(self):
+        while watch[0](sys.stdin.fileno(), None): pass
+    def quit(self): pass
+watch = []
+class GLib:
+    Variant = Variant; VariantType = Variant; Error = Error; MainLoop = MainLoop
+    PRIORITY_DEFAULT = IO_IN = IO_HUP = 0
+    markup_escape_text = staticmethod(lambda text: html.escape(text))
+    io_add_watch = staticmethod(lambda fd, priority, condition, callback: watch.append(callback))
+class Reply:
+    def unpack(self): return [1]
+class Bus:
+    def signal_subscribe(self, *args): pass
+    def call_sync(self, name, path, iface, method, params, *rest):
+        with open(os.environ['NOTIFY_LOG'], 'a') as log: log.write(json.dumps(params.value[3:5]) + chr(10))
+        return Reply()
+class Gio:
+    class BusType: SESSION = 0
+    class DBusSignalFlags: NONE = 0
+    class DBusCallFlags: NONE = 0
+    bus_get_sync = staticmethod(lambda *args: Bus())
+`);
+        const NOTIFY_LOG = path.join(dir, 'calls');
+        const name = '<img src="https://x.io/a">';
+        execFileSync('python3', ['Notifier.py'], {
+            env: { ...process.env, PYTHONPATH: dir, PYTHONDONTWRITEBYTECODE: '1', XDG_RUNTIME_DIR: dir, NOTIFY_LOG },
+            input: JSON.stringify({ id: 'task:1', title: name, body: `Now\n${name} & co` }) + '\n',
+        });
+        assert.deepEqual(JSON.parse(fs.readFileSync(NOTIFY_LOG, 'utf8')), [name, 'Now\n&lt;img src=&quot;https://x.io/a&quot;&gt; &amp; co']);
+    } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+    }
 });
