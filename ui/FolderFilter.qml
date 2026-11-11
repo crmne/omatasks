@@ -56,6 +56,7 @@ RowLayout {
             }
             Text {
                 id: chevron
+                textFormat: Text.PlainText
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.rightMargin: trigger.borderRight + Style.spacing.controlGap
@@ -124,6 +125,7 @@ RowLayout {
                                 color: row.checked || row.partial ? Style.selectedFillFor(Color.popups.text, Color.accent) : "transparent"
                                 borderSpec: Border.controlSpec(row.checked || row.partial ? "selected" : "normal", Color.popups.text, Color.accent)
                                 Text {
+                                    textFormat: Text.PlainText
                                     anchors.centerIn: parent
                                     visible: row.checked || row.partial
                                     text: row.partial ? "−" : "✓"
