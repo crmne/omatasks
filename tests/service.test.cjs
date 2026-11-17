@@ -49,6 +49,16 @@ function service() {
     vm.runInContext(functions, ctx);
     return { s: ctx, wires };
 }
+test('View options start from per-tab defaults: All groups by project, others stay ungrouped, and a saved choice wins', () => {
+    const { s } = service();
+    assert.equal(s.viewOptions('all').grouping, 'project');
+    assert.equal(s.viewOptions('all').sorting, 'smart');
+    assert.equal(s.viewOptions('today').grouping, 'none');
+    s.setOption('all', 'grouping', 'none');
+    assert.equal(s.viewOptions('all').grouping, 'none');
+    s.resetView('all');
+    assert.equal(s.viewOptions('all').grouping, 'project');
+});
 function reorderFixture() {
     const fixture = service(), s = fixture.s;
     s.projects = [{id: 'inbox', name: 'Inbox', inbox_project: true}];
