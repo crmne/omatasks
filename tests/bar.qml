@@ -26,6 +26,23 @@ ShellRoot {
         function serviceFor(name) { return service; }
         function summon(name, payload) {}
     }
+    // What Omarchy gives a widget inside a replacement bar such as Station:
+    // a shell whose serviceFor answers null (pluginShellForBarEntry).
+    QtObject {
+        id: replacementShell
+        function serviceFor(name) { return null; }
+        function summon(name, payload) {}
+    }
+    UI.PluginBarApi {
+        id: replacementBarApi
+        pluginId: "crmne.todoist"
+        moduleName: "crmne.todoist"
+        shell: replacementShell
+        barSize: 32
+        barForeground: "white"
+        foreground: "white"
+        fontFamily: Qt.application.font.family
+    }
     UI.PluginBarApi {
         id: barApi
         pluginId: "crmne.todoist"
@@ -42,6 +59,7 @@ ShellRoot {
         implicitWidth: 700; implicitHeight: 560
         color: Commons.Color.popups.background
         Plugin.BarWidget { id: widget; x: 8; y: 8; bar: barApi }
+        Plugin.BarWidget { id: replacementWidget; x: 600; y: 8; bar: replacementBarApi }
         Tasks.TaskList { id: taskList; x: 8; y: 48; width: 456; height: 500; service: service }
         // The control: if Qt's default format stops fetching, or this test stops
         // being able to see a fetch, check-bar fails instead of passing quietly.
@@ -98,6 +116,19 @@ ShellRoot {
             mouseClick(row, 65, 12);
             wait(300);
             verify(taskList.selectedTask && taskList.selectedTask.id === "hostile");
+        }
+        // Under a replacement bar the widget finds the service the plugin
+        // published, registers with it, and its click opens the panel.
+        function test_replacement_bar_finds_the_service_and_opens_the_panel() {
+            tryVerify(function() { return replacementWidget.service === service; }, 3000);
+            verify(service.widgets.indexOf(replacementWidget) >= 0);
+            var panel = findChild(replacementWidget, "taskPanel");
+            verify(panel);
+            verify(!panel.open);
+            replacementWidget.toggle();
+            verify(panel.open);
+            replacementWidget.toggle();
+            verify(!panel.open);
         }
         // Long enough for a fetch to reach the local server if one started.
         function test_z_wait_for_requests() { wait(1500); verify(true); }

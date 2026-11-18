@@ -6,6 +6,7 @@ import Quickshell.Wayland
 import "Model.js" as Model
 import "ui/OrderModel.js" as Order
 import "ui/BulkModel.js" as Bulk
+import "Bridge.js" as Bridge
 import "ui/NotifyModel.js" as Notify
 import "ui/BarModel.js" as Bar
 
@@ -545,7 +546,8 @@ Item {
         onExited: if (root.notifying) notifierRestart.start()
     }
     onNotifyingChanged: notifier.running = notifying
-    Component.onCompleted: notifier.running = notifying
+    Component.onCompleted: { notifier.running = notifying; Bridge.publish(root); }
+    Component.onDestruction: Bridge.clear(root)
     Timer { id: notifierRestart; interval: 30000; onTriggered: if (root.notifying) notifier.running = true }
     Timer {
         interval: 15000; running: root.notifying && root.loaded; repeat: true; triggeredOnStart: true

@@ -3,12 +3,22 @@ import qs.Commons
 import qs.Ui
 import "ui" as Tasks
 import "ui/BarModel.js" as Bar
+import "Bridge.js" as Bridge
 
 Panel {
     id: root
     moduleName: "crmne.todoist"
     ipcTarget: ""
-    readonly property var service: bar && bar.shell ? bar.shell.serviceFor(moduleName) : null
+    readonly property var directService: bar && bar.shell && typeof bar.shell.serviceFor === "function" ? bar.shell.serviceFor(moduleName) : null
+    // A replacement bar's shell answers serviceFor with null, so read the
+    // service it published instead. Assigned only when it changes, so the
+    // bar does not re-evaluate every second.
+    property var bridgedService: null
+    readonly property var service: directService || bridgedService
+    Timer {
+        interval: 1000; running: !root.directService; repeat: true; triggeredOnStart: true
+        onTriggered: { var current = Bridge.current(); if (current !== root.bridgedService) root.bridgedService = current; }
+    }
     implicitWidth: button.implicitWidth
     implicitHeight: button.implicitHeight
     onServiceChanged: if (service) service.registerWidget(root)
@@ -112,6 +122,7 @@ Panel {
     }
     KeyboardPanel {
         id: panel
+        objectName: "taskPanel"
         anchorItem: root; owner: root; bar: root.bar
         open: root.opened && root.service !== null
         focusTarget: taskList
