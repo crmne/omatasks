@@ -410,6 +410,20 @@ test('The bar mode is saved with the view preferences and rejects unknown modes'
     s.setBarMode('everything');
     assert.equal(s.preferences.barTask, 'count');
 });
+test('The panel tab is saved with the view preferences, written only when it changes, and rejects unknown tabs', () => {
+    const {s} = service();
+    const written = [];
+    s.settingsFile = { setText(text) { written.push(JSON.parse(text)); } };
+    s.setPanelTab('inbox');
+    assert.equal(s.preferences.panelTab, 'inbox');
+    assert.equal(written.at(-1).panelTab, 'inbox');
+    s.setPanelTab('inbox');
+    s.setPanelTab('calendar');
+    assert.equal(s.preferences.panelTab, 'inbox');
+    assert.equal(written.length, 1);
+    s.setPanelTab('all');
+    assert.equal(s.Model.panelTab(s.preferences), 'all');
+});
 test('Toggling the panel opens it on the focused monitor, or closes every open one', () => {
     const {s} = service();
     const widget = name => ({opened: false, QsWindow: {window: {screen: {name}}}, open() { this.opened = true; }, close() { this.opened = false; }});

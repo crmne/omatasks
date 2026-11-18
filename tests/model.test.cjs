@@ -158,3 +158,11 @@ test('Without a folder selection the Inbox tab still shows the inbox project, wh
     assert.deepEqual(plain(rows({ folder: { include: [], exclude: [] } }).filter(r => r.task).map(r => r.task.id)), ['in']);
     assert.deepEqual(plain(rows({ folder: { include: ['inbox'], exclude: [] } }).filter(r => r.task).map(r => r.task.id)), ['in']);
 });
+test('The panel opens on the saved tab when it still exists, otherwise on Today', () => {
+    assert.equal(M.panelTab({ panelTab: 'upcoming' }), 'upcoming');
+    assert.equal(M.panelTab({ panelTab: 'all' }), 'all');
+    assert.equal(M.panelTab({ panelTab: 'calendar' }), 'today');
+    assert.equal(M.panelTab({ panelTab: ['inbox'] }), 'today');
+    assert.equal(M.panelTab({}), 'today');
+    assert.equal(M.panelTab(null), 'today');
+});

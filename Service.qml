@@ -66,6 +66,7 @@ Item {
     readonly property var sectionMap: Model.byId(sections)
     readonly property int panelWidth: Math.max(440, Math.min(1000, Number(preferences.panelWidth) || 460))
     readonly property int panelHeight: Math.max(280, Math.min(1200, Number(preferences.panelHeight) || 560))
+    readonly property string panelTab: Model.panelTab(preferences)
     readonly property int todayCount: Model.todayCount(tasks, projects, user.id, now, viewOptions("today").folder)
     property string stateDir: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/omarchy-todoist"
 
@@ -104,6 +105,11 @@ Item {
     }
     function saveShortcut(value) {
         preferences = Object.assign({}, preferences, {quickAddShortcut: value});
+        if (storageReady) settingsFile.setText(JSON.stringify(preferences));
+    }
+    function setPanelTab(value) {
+        if (Model.VIEWS.indexOf(value) < 0 || value === preferences.panelTab) return;
+        preferences = Object.assign({}, preferences, {panelTab: value});
         if (storageReady) settingsFile.setText(JSON.stringify(preferences));
     }
     function setBarMode(value) {

@@ -1,6 +1,7 @@
 // Pure data transformations; also exercised by node --test.
 var DEFAULT_VIEW = { grouping: "none", sorting: "smart", assignee: "mine", priority: "all", label: "all", deadline: "all", folder: null };
 var VIEW_DEFAULTS = { all: { grouping: "project" } };
+var VIEWS = ["today", "inbox", "upcoming", "all"];
 var API_BASE = "https://api.todoist.com/api/v1";
 var TOKEN_URL = "https://app.todoist.com/app/settings/integrations/developer";
 
@@ -208,6 +209,8 @@ function viewRows(tasks, projectList, collaborators, options, view, userId, now)
     if (options.grouping !== "project" || !keys.length) rows.push({kind: "add", key: "add", projectId: ""});
     return rows;
 }
+// The tab the panel opens on: the saved one if it still exists, else Today.
+function panelTab(preferences) { var tab = (preferences || {}).panelTab; return VIEWS.indexOf(tab) >= 0 ? tab : "today"; }
 function todayCount(tasks, projectList, userId, now, folder) {
     var projects = byId(projectList), today = dateKey(now), folders = folderIds(projectList, folder);
     return tasks.filter(function(t) { return inView(t, "today", today, projects) && matches(t, DEFAULT_VIEW, userId, today, folders); }).length;
