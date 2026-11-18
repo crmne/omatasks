@@ -240,7 +240,7 @@ Implementation follows the [Todoist API v1 documentation](https://developer.todo
 
 `./tools/render-preview` regenerates the release artwork and screenshots from the real QML components with sample data. It never accesses your account.
 
-`check-bar` runs the bar widget, the panel and the task details offscreen with an image tag in every synced field and a local server, and fails if any of them asks that server for an image. A deliberately unsafe Text in the test proves it would notice.
+`check-bar` runs the bar widget, the panel and the task details offscreen with an image tag in every synced field and a local server, and fails if any of them asks that server for an image. A deliberately unsafe Text in the test proves it would notice. It also runs the widget the way a replacement bar such as Station hosts it, with a shell that offers no service, and checks that a click still opens the panel.
 
 `check-drag` runs offscreen QML interaction tests using synthetic tasks and intercepted requests. It checks clicks, multi-selection, context menus, bulk actions, deletion confirmation, drops, scrolling, scroll-position retention, and cancellation, without accessing a Todoist account. Bulk service tests cover batching, partial failures, retries, recurring completion, and account changes.
 

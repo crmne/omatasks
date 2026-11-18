@@ -24,7 +24,7 @@ omarchy-shell shell rescanPlugins
 omarchy plugin enable crmne.todoist --section right
 if $todoist_upgrade; then
   # The rescan keeps the running service, so updated service code loads only on restart.
-  printf '%s\n' 'Updated. Run omarchy-restart-shell to load the new version.'
+  printf '%s\n' 'Updated. Run omarchy restart shell to load the new version.'
 else
   printf '%s\n' 'Installed. Click the Todoist bar icon to connect to Todoist.'
 fi
