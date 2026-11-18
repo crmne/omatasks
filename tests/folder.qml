@@ -3,6 +3,7 @@ import QtQuick
 import QtTest
 import Quickshell
 import qs.Commons
+import qs.Commons as Commons
 import "plugin" as Plugin
 import "plugin/ui" as Tasks
 
@@ -19,7 +20,7 @@ ShellRoot {
         id: window
         visible: true
         implicitWidth: 360; implicitHeight: 360
-        color: Color.popups.background
+        color: Commons.Color.popups.background
         Tasks.FolderFilter { id: filter; anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 18; service: service; view: "today" }
     }
     TestCase {
@@ -68,6 +69,21 @@ ShellRoot {
             verify(row("training").checked); verify(row("pro").partial); verify(!row("planning").checked);
             click("pro");
             verify(row("pro").checked); verify(row("planning").checked);
+        }
+        // Qt 6.12's own Color type hid the palette from bare Color references,
+        // so the open checklist lost its background and its names fell back to black.
+        function test_the_checklist_uses_the_theme_palette() {
+            var text = Commons.Color.popups.text, background = Commons.Color.popups.background;
+            Commons.Color.popups.text = "#123456"; Commons.Color.popups.background = "#fedcba";
+            filter.open(); tryCompare(filter, "popupOpen", true);
+            var popup = findChild(filter, "folderPopup");
+            verify(popup !== null);
+            verify(Qt.colorEqual(popup.background.color, "#fedcba"), "Popup background: " + popup.background.color);
+            var label = null;
+            (function find(node) { if (node.text === "Pro" && node.elide !== undefined) label = node; for (var i = 0; i < node.children.length; i++) find(node.children[i]); })(row("pro"));
+            verify(label !== null);
+            verify(Qt.colorEqual(label.color, "#123456"), "Folder name: " + label.color);
+            Commons.Color.popups.text = text; Commons.Color.popups.background = background;
         }
         function test_siblings_can_be_selected_and_cleared() {
             filter.open(); tryCompare(filter, "popupOpen", true);

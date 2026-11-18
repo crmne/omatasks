@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls as C
 import QtQuick.Layouts
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui as UI
 import "../Model.js" as Model
 
@@ -15,7 +16,7 @@ RowLayout {
     readonly property var selected: Model.folderValues(service.projects, folder)
     readonly property bool popupOpen: popup.opened
     readonly property Item rows: list
-    readonly property var popupBorderSpec: Border.localOrSurfaceSpec("popups", "border", Color.popups.border, Color.popups.border, Style.normalBorderWidth)
+    readonly property var popupBorderSpec: Border.localOrSurfaceSpec("popups", "border", Commons.Color.popups.border, Commons.Color.popups.border, Style.normalBorderWidth)
     function toggle(id) { service.setOption(view, "folder", Model.toggleFolder(service.projects, folder, id)); }
     function open() { popup.open(); }
     function close() { popup.close(); }
@@ -32,8 +33,8 @@ RowLayout {
             anchors.fill: parent
             radius: Style.cornerRadius
             activeFocusOnTab: true
-            color: Style.controlFill(trigger.activeFocus, hover.hovered, Color.popups.text, Color.accent)
-            borderSpec: Border.controlSpec(trigger.activeFocus ? "focus" : hover.hovered ? "hover-cursor" : "normal", Color.popups.text, Color.accent)
+            color: Style.controlFill(trigger.activeFocus, hover.hovered, Commons.Color.popups.text, Commons.Color.accent)
+            borderSpec: Border.controlSpec(trigger.activeFocus ? "focus" : hover.hovered ? "hover-cursor" : "normal", Commons.Color.popups.text, Commons.Color.accent)
             Keys.onPressed: function(event) {
                 if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space || event.key === Qt.Key_Down) {
                     popup.opened ? popup.close() : popup.open();
@@ -49,7 +50,7 @@ RowLayout {
                 anchors.leftMargin: trigger.borderLeft + Style.spacing.controlPaddingX
                 anchors.rightMargin: trigger.borderRight + Style.spacing.md
                 text: Model.folderSummary(root.service.projects, root.folder)
-                color: Color.popups.text
+                color: Commons.Color.popups.text
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.body
                 elide: Text.ElideRight
@@ -61,7 +62,7 @@ RowLayout {
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.rightMargin: trigger.borderRight + Style.spacing.controlGap
                 text: "󰅀"
-                color: Qt.darker(Color.popups.text, 1.2)
+                color: Qt.darker(Commons.Color.popups.text, 1.2)
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.body
             }
@@ -81,7 +82,7 @@ RowLayout {
                 topPadding: Border.top(root.popupBorderSpec) + Style.spacing.hairline
                 bottomPadding: Border.bottom(root.popupBorderSpec) + Style.spacing.hairline
                 focus: true
-                background: UI.BorderSurface { color: Color.popups.background; borderSpec: root.popupBorderSpec; radius: Style.cornerRadius }
+                background: UI.BorderSurface { color: Commons.Color.popups.background; borderSpec: root.popupBorderSpec; radius: Style.cornerRadius }
                 onOpened: { list.currentIndex = -1; list.forceActiveFocus(); }
                 contentItem: ListView {
                     id: list
@@ -108,7 +109,7 @@ RowLayout {
                         objectName: "folderRow_" + modelData.id
                         width: list.width
                         height: Style.spacing.popupRowHeight
-                        color: index === list.currentIndex ? Style.hoverFillFor(Color.popups.text, Color.accent) : checked ? Style.selectedFillFor(Color.popups.text, Color.accent) : "transparent"
+                        color: index === list.currentIndex ? Style.hoverFillFor(Commons.Color.popups.text, Commons.Color.accent) : checked ? Style.selectedFillFor(Commons.Color.popups.text, Commons.Color.accent) : "transparent"
                         Row {
                             anchors.left: parent.left
                             anchors.right: parent.right
@@ -122,14 +123,14 @@ RowLayout {
                                 height: width
                                 radius: Math.max(2, Style.cornerRadius / 2)
                                 anchors.verticalCenter: parent.verticalCenter
-                                color: row.checked || row.partial ? Style.selectedFillFor(Color.popups.text, Color.accent) : "transparent"
-                                borderSpec: Border.controlSpec(row.checked || row.partial ? "selected" : "normal", Color.popups.text, Color.accent)
+                                color: row.checked || row.partial ? Style.selectedFillFor(Commons.Color.popups.text, Commons.Color.accent) : "transparent"
+                                borderSpec: Border.controlSpec(row.checked || row.partial ? "selected" : "normal", Commons.Color.popups.text, Commons.Color.accent)
                                 Text {
                                     textFormat: Text.PlainText
                                     anchors.centerIn: parent
                                     visible: row.checked || row.partial
                                     text: row.partial ? "−" : "✓"
-                                    color: Style.selectedStateColor(Color.popups.text, Color.accent)
+                                    color: Style.selectedStateColor(Commons.Color.popups.text, Commons.Color.accent)
                                     font.family: root.fontFamily
                                     font.pixelSize: Math.round(box.height * 0.85)
                                     font.bold: true
@@ -140,7 +141,7 @@ RowLayout {
                                 width: parent.width - box.width - parent.spacing
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: row.modelData.name
-                                color: row.index === list.currentIndex ? Style.hoverStateColor(Color.popups.text, Color.accent) : Color.popups.text
+                                color: row.index === list.currentIndex ? Style.hoverStateColor(Commons.Color.popups.text, Commons.Color.accent) : Commons.Color.popups.text
                                 font.family: root.fontFamily
                                 font.pixelSize: Style.font.body
                                 font.bold: row.checked || row.partial
