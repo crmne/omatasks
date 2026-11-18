@@ -39,7 +39,7 @@ Click the **Todoist icon** in the bar. Setup appears **inside that panel**:
 2. Copy your API token. The panel links directly to [Developer settings](https://app.todoist.com/app/settings/integrations/developer).
 3. Paste the token into the password field with **Ctrl+V** and select **Connect**.
 
-The token is validated before being saved. It lives in `$XDG_CONFIG_HOME/omarchy-todoist/token` (normally `~/.config/omarchy-todoist/token`) with mode `0600`, inside a `0700` directory. It is sent to the credential writer and to the request helper through stdin, and to Todoist through an HTTPS authorization header. It is never stored in `shell.json`, command arguments, or this repository. Display and notification preferences are stored in `views.json` beside it. Task data stays in memory.
+The token is validated before being saved. It lives in `$XDG_CONFIG_HOME/omarchy-todoist/token` (normally `~/.config/omarchy-todoist/token`) with mode `0600`, inside a `0700` directory. It is sent to the credential writer and to the request helper through stdin, and to Todoist through an HTTPS authorization header. It is never stored in `shell.json`, command arguments, or this repository. Display and notification preferences, and the tab the panel was left on, are stored in `views.json` beside it. Task data stays in memory.
 
 Temporary sync failures retry automatically after 5 seconds, with increasing delays up to five minutes. Cached tasks stay visible and your account stays connected. Use **Retry now** in the error banner to try immediately; Todoist rate limits still apply. Failed task changes retain their existing explicit retry behavior.
 
@@ -127,6 +127,7 @@ The layout follows Todoist’s [Quick Add design comparison](https://www.todoist
   <img src="screenshots/bar.png" alt="The bar naming the next task: Review the homepage designs, at 10:00" width="420">
 
 - **Ctrl+Tab / Ctrl+Shift+Tab** switches tabs. **Tab** moves between controls. **Escape** closes the current editor, menu, or panel.
+- The panel opens on the tab you last used, also after the shell restarts. It starts on Today.
 - Middle-click the bar widget, or use **Display → Refresh**, to refresh immediately. Background sync runs every minute.
 - Open the panel or Quick Add from a key or a script with `omarchy-shell crmne.todoist`:
 

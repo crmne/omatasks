@@ -26,7 +26,7 @@ FocusScope {
     property real dragY: 0
     property real dropY: 0
     readonly property bool dragging: dragIndex >= 0
-    readonly property var viewTabs: ["today", "inbox", "upcoming", "all"]
+    readonly property var viewTabs: Model.VIEWS
     readonly property var options: service.viewOptions(view)
     readonly property var rows: dragRows || heldRows || Model.viewRows(service.tasks, service.projects, service.collaborators, options, view, service.user.id, service.now)
     readonly property bool setupVisible: !service.configured || settingsOpen
@@ -68,7 +68,8 @@ FocusScope {
         display.close();
         taskMenu.open();
     }
-    function reset() { clearSelection(); view = "today"; settingsOpen = false; display.close(); details.close(); }
+    // Opens on the tab it was left on, which the service keeps across restarts.
+    function reset() { clearSelection(); view = service.panelTab; settingsOpen = false; display.close(); details.close(); }
     function showTask(task) { clearSelection(); selectedTask = task; details.open(); }
     function startDrag(index, point) {
         if (service.saving || composerKey || setupVisible || selectedIds.length) return;
@@ -117,7 +118,7 @@ FocusScope {
             selectedIds = Bulk.visibleIds(rows); event.accepted = true;
         }
     }
-    onViewChanged: { cancelDrag(); clearSelection(); composerKey = ""; list.positionViewAtBeginning(); }
+    onViewChanged: { service.setPanelTab(view); cancelDrag(); clearSelection(); composerKey = ""; list.positionViewAtBeginning(); }
     onSetupVisibleChanged: if (setupVisible) { cancelDrag(); clearSelection(); }
     onVisibleChanged: if (!visible) { cancelDrag(); clearSelection(); }
     onComposerKeyChanged: if (!composerKey) heldRows = null

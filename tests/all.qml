@@ -71,6 +71,22 @@ ShellRoot {
                 for (var j = 0; j < taskList.viewTabs.length; j++) {  var b = tab(taskList.viewTabs[j]); verify(b.width >= b.implicitWidth, b.objectName + " is truncated at " + widths[w] + ": " + b.width + " < " + b.implicitWidth); }
             }
         }
+        // Reopening the panel (reset) returns to the tab it was left on, which
+        // is saved with the preferences; an unknown saved tab falls back to Today.
+        function test_the_panel_reopens_on_the_tab_it_was_left_on() {
+            mouseClick(tab("inbox")); tryCompare(taskList, "view", "inbox");
+            compare(service.preferences.panelTab, "inbox");
+            taskList.reset();
+            compare(taskList.view, "inbox");
+            taskList.forceActiveFocus();
+            keyClick(Qt.Key_Tab, Qt.ControlModifier);
+            compare(service.preferences.panelTab, "upcoming");
+            taskList.reset();
+            compare(taskList.view, "upcoming");
+            service.preferences = {panelTab: "calendar"};
+            taskList.reset();
+            compare(taskList.view, "today");
+        }
         function test_the_bar_count_ignores_undated_tasks() {
             compare(service.todayCount, 0);
         }
