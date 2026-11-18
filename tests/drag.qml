@@ -129,6 +129,7 @@ ShellRoot {
             keyClick(Qt.Key_Up); keyClick(Qt.Key_K); compare(taskList.rows[taskList.cursorIndex].task.id, "0");
             var row = findChild(taskList, "taskPointer_0").parent;
             verify(row.current);
+            verify(findChild(row, "taskCursor").visible, "The cursor row has the hover-cursor border");
             verify(!findChild(taskList, "taskPointer_1").parent.current);
             keyClick(Qt.Key_Return); wait(80);
             var details = findChild(taskList, "taskDetailsPopup");

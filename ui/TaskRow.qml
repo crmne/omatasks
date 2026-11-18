@@ -1,6 +1,7 @@
 import QtQuick
 import qs.Commons
 import qs.Commons as Commons
+import qs.Ui as UI
 import "../Model.js" as Model
 
 Item {
@@ -14,7 +15,8 @@ Item {
     property bool dragging: false
     property bool listDragging: false
     property bool selected: false
-    // Under the keyboard cursor: the hover fill, a step stronger.
+    // Under the keyboard cursor: drawn like the cursor in Omarchy's panels,
+    // the hover fill and the hover-cursor border.
     property bool current: false
     signal activated(var task)
     signal selectionToggled(var task)
@@ -46,6 +48,7 @@ Item {
     implicitHeight: content.implicitHeight + Style.space(18)
 
     Rectangle { anchors.fill: parent; color: root.selected ? Style.selectedFillFor(Commons.Color.popups.text, Commons.Color.accent) : Style.hoverFillFor(Commons.Color.popups.text, Commons.Color.accent); visible: root.selected || root.current || hover.hovered; opacity: root.selected || root.current ? 1 : 0.5; radius: Style.cornerRadius }
+    UI.BorderSurface { objectName: "taskCursor"; anchors.fill: parent; visible: root.current; color: "transparent"; radius: Style.cornerRadius; borderSpec: Border.controlSpec("hover-cursor", Commons.Color.popups.text, Commons.Color.accent) }
     Rectangle { anchors.left: parent.left; anchors.top: parent.top; anchors.bottom: parent.bottom; width: Style.space(2); color: Commons.Color.accent; visible: root.selected }
     HoverHandler { id: hover }
     MouseArea {
