@@ -14,6 +14,8 @@ Item {
     property bool dragging: false
     property bool listDragging: false
     property bool selected: false
+    // Under the keyboard cursor: the hover fill, a step stronger.
+    property bool current: false
     signal activated(var task)
     signal selectionToggled(var task)
     signal contextRequested(var task, real x, real y)
@@ -43,7 +45,7 @@ Item {
     }
     implicitHeight: content.implicitHeight + Style.space(18)
 
-    Rectangle { anchors.fill: parent; color: root.selected ? Style.selectedFillFor(Commons.Color.popups.text, Commons.Color.accent) : Style.hoverFillFor(Commons.Color.popups.text, Commons.Color.accent); visible: root.selected || hover.hovered; opacity: root.selected ? 1 : 0.5; radius: Style.cornerRadius }
+    Rectangle { anchors.fill: parent; color: root.selected ? Style.selectedFillFor(Commons.Color.popups.text, Commons.Color.accent) : Style.hoverFillFor(Commons.Color.popups.text, Commons.Color.accent); visible: root.selected || root.current || hover.hovered; opacity: root.selected || root.current ? 1 : 0.5; radius: Style.cornerRadius }
     Rectangle { anchors.left: parent.left; anchors.top: parent.top; anchors.bottom: parent.bottom; width: Style.space(2); color: Commons.Color.accent; visible: root.selected }
     HoverHandler { id: hover }
     MouseArea {

@@ -118,6 +118,53 @@ ShellRoot {
             verify(findChild(taskList, "taskDetailsPopup").opened);
             compare(service.captured.length, 0);
         }
+        // j/k and the arrow keys move a cursor through the tasks, as in
+        // Omarchy's panels; Enter or Space opens the task under it.
+        function test_keyboard_cursor_moves_through_tasks_and_opens_one() {
+            taskList.forceActiveFocus();
+            compare(taskList.cursorIndex, -1);
+            keyClick(Qt.Key_J); compare(taskList.rows[taskList.cursorIndex].task.id, "0");
+            keyClick(Qt.Key_J); keyClick(Qt.Key_Down); compare(taskList.rows[taskList.cursorIndex].task.id, "2");
+            keyClick(Qt.Key_K); compare(taskList.rows[taskList.cursorIndex].task.id, "1");
+            keyClick(Qt.Key_Up); keyClick(Qt.Key_K); compare(taskList.rows[taskList.cursorIndex].task.id, "0");
+            var row = findChild(taskList, "taskPointer_0").parent;
+            verify(row.current);
+            verify(!findChild(taskList, "taskPointer_1").parent.current);
+            keyClick(Qt.Key_Return); wait(80);
+            var details = findChild(taskList, "taskDetailsPopup");
+            verify(details.opened);
+            compare(taskList.selectedTask.id, "0");
+            keyClick(Qt.Key_J);
+            compare(taskList.rows[taskList.cursorIndex].task.id, "0", "Keys go to the open details, not the list");
+            keyClick(Qt.Key_Escape); tryCompare(details, "opened", false);
+            taskList.forceActiveFocus();
+            keyClick(Qt.Key_Space); wait(80);
+            verify(details.opened);
+            keyClick(Qt.Key_Escape); tryCompare(details, "opened", false);
+            compare(service.captured.length, 0); compare(service.completions.length, 0);
+        }
+        function test_keyboard_cursor_scrolls_into_view_and_clears_on_tab_change() {
+            taskList.forceActiveFocus();
+            var list = findChild(taskList, "taskListView");
+            for (var i = 0; i < 23; i++) keyClick(Qt.Key_J);
+            compare(taskList.rows[taskList.cursorIndex].task.id, "22");
+            verify(list.contentY > 0, "The list scrolls to keep the cursor in view");
+            var row = findChild(taskList, "taskPointer_22").parent;
+            var top = row.mapToItem(list, 0, 0).y;
+            verify(top >= 0 && top + row.height <= list.height + 1, "Row 22 is visible: " + top);
+            keyClick(Qt.Key_Tab, Qt.ControlModifier);
+            compare(taskList.cursorIndex, -1);
+        }
+        function test_typing_j_in_the_composer_does_not_move_the_cursor() {
+            taskList.forceActiveFocus();
+            keyClick(Qt.Key_J);
+            var addRow = taskList.rows.findIndex(function(r) { return r.kind === "add"; });
+            taskList.addAt(taskList.rows[addRow].key, "");
+            wait(150);
+            keyClick(Qt.Key_J); keyClick(Qt.Key_K); keyClick(Qt.Key_Down);
+            compare(taskList.rows[taskList.cursorIndex].task.id, "0");
+            keyClick(Qt.Key_Escape); tryCompare(taskList, "composerKey", "");
+        }
         function test_ctrl_click_selects_and_toggles() {
             mouseClick(findChild(taskList, "taskPointer_0"), 65, 12, Qt.LeftButton, Qt.ControlModifier);
             mouseClick(findChild(taskList, "taskPointer_1"), 65, 12, Qt.LeftButton, Qt.ControlModifier);

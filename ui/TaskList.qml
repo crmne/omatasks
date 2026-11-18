@@ -18,6 +18,9 @@ FocusScope {
     property var heldRows: null
     property var selectedTask: null
     property var selectedIds: []
+    // The keyboard cursor, moved with j/k or the arrow keys as in Omarchy's panels.
+    property string cursor: ""
+    readonly property int cursorIndex: cursor === "" ? -1 : rows.findIndex(function(row) { return Model.rowCursor(row) === root.cursor; })
     property var dragRows: null
     property int dragIndex: -1
     property int dropIndex: -1
@@ -69,7 +72,7 @@ FocusScope {
         taskMenu.open();
     }
     // Opens on the tab it was left on, which the service keeps across restarts.
-    function reset() { clearSelection(); view = service.panelTab; settingsOpen = false; display.close(); details.close(); }
+    function reset() { clearSelection(); cursor = ""; view = service.panelTab; settingsOpen = false; display.close(); details.close(); }
     function showTask(task) { clearSelection(); selectedTask = task; details.open(); }
     function startDrag(index, point) {
         if (service.saving || composerKey || setupVisible || selectedIds.length) return;
@@ -117,8 +120,21 @@ FocusScope {
         if (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_A && !dragging && !composerKey && !details.visible && !display.visible && !taskMenu.visible && !setupVisible) {
             selectedIds = Bulk.visibleIds(rows); event.accepted = true;
         }
+        // j/k or Down/Up move the cursor through the tasks, and Enter or Space
+        // opens the one under it. Editors, menus and popups keep their keys.
+        var browsing = !dragging && !composerKey && !details.visible && !display.visible && !taskMenu.visible && !setupVisible
+            && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier));
+        if (!browsing || event.accepted) return;
+        var down = event.key === Qt.Key_Down || event.text === "j", up = event.key === Qt.Key_Up || event.text === "k";
+        if (down || up) {
+            cursor = Model.moveCursor(rows, cursor, down ? 1 : -1);
+            if (cursorIndex >= 0) list.positionViewAtIndex(cursorIndex, ListView.Contain);
+            event.accepted = true;
+        } else if (cursorIndex >= 0 && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space)) {
+            showTask(rows[cursorIndex].task); event.accepted = true;
+        }
     }
-    onViewChanged: { service.setPanelTab(view); cancelDrag(); clearSelection(); composerKey = ""; list.positionViewAtBeginning(); }
+    onViewChanged: { service.setPanelTab(view); cursor = ""; cancelDrag(); clearSelection(); composerKey = ""; list.positionViewAtBeginning(); }
     onSetupVisibleChanged: if (setupVisible) { cancelDrag(); clearSelection(); }
     onVisibleChanged: if (!visible) { cancelDrag(); clearSelection(); }
     onComposerKeyChanged: if (!composerKey) heldRows = null
@@ -238,6 +254,7 @@ FocusScope {
                     task: rowLoader.modelData.task; service: root.service; view: root.view; grouping: root.options.grouping
                     reorderEnabled: !root.service.saving && !root.composerKey && !root.selectedIds.length
                     selected: root.selectedIds.indexOf(String(task.id)) >= 0
+                    current: root.cursorIndex === rowLoader.index
                     dragging: root.dragIndex === rowLoader.index
                     listDragging: root.dragging
                     opacity: dragging ? 0.3 : 1

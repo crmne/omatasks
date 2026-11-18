@@ -209,6 +209,16 @@ function viewRows(tasks, projectList, collaborators, options, view, userId, now)
     if (options.grouping !== "project" || !keys.length) rows.push({kind: "add", key: "add", projectId: ""});
     return rows;
 }
+// The keyboard cursor names a task row by its group as well, since label
+// grouping lists a task under each of its labels. A step stops at either end;
+// with no cursor, down starts at the first task and up at the last.
+function rowCursor(row) { return row && row.kind === "task" ? String(row.groupKey) + "\n" + String(row.key) : ""; }
+function moveCursor(rows, cursor, step) {
+    var keys = rows.map(rowCursor).filter(function(key) { return key !== ""; });
+    if (!keys.length) return "";
+    var at = keys.indexOf(cursor);
+    return keys[at < 0 ? (step > 0 ? 0 : keys.length - 1) : Math.max(0, Math.min(keys.length - 1, at + step))];
+}
 // The tab the panel opens on: the saved one if it still exists, else Today.
 function panelTab(preferences) { var tab = (preferences || {}).panelTab; return VIEWS.indexOf(tab) >= 0 ? tab : "today"; }
 function todayCount(tasks, projectList, userId, now, folder) {

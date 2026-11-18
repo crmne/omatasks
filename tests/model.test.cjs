@@ -166,3 +166,19 @@ test('The panel opens on the saved tab when it still exists, otherwise on Today'
     assert.equal(M.panelTab({}), 'today');
     assert.equal(M.panelTab(null), 'today');
 });
+test('The keyboard cursor steps through task rows, keeps label duplicates apart and stops at either end', () => {
+    const tasks = [task('a', { labels: ['work', 'next'] }), task('b', { labels: ['work'] })];
+    const rows = M.viewRows(tasks, projects, [], { ...M.DEFAULT_VIEW, grouping: 'label' }, 'today', 'me', today);
+    const order = rows.filter(r => r.kind === 'task').map(M.rowCursor);
+    assert.equal(order.length, 3);
+    assert.equal(new Set(order).size, 3);
+    assert.equal(M.moveCursor(rows, '', 1), order[0]);
+    assert.equal(M.moveCursor(rows, '', -1), order[2]);
+    assert.equal(M.moveCursor(rows, order[0], 1), order[1]);
+    assert.equal(M.moveCursor(rows, order[1], 1), order[2]);
+    assert.equal(M.moveCursor(rows, order[2], 1), order[2]);
+    assert.equal(M.moveCursor(rows, order[0], -1), order[0]);
+    assert.equal(M.moveCursor(rows, 'gone\nmissing', 1), order[0]);
+    assert.equal(M.rowCursor(rows.find(r => r.kind === 'group')), '');
+    assert.equal(M.moveCursor(rows.filter(r => r.kind !== 'task'), order[0], 1), '');
+});

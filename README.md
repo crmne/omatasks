@@ -127,6 +127,7 @@ The layout follows Todoist’s [Quick Add design comparison](https://www.todoist
   <img src="screenshots/bar.png" alt="The bar naming the next task: Review the homepage designs, at 10:00" width="420">
 
 - **Ctrl+Tab / Ctrl+Shift+Tab** switches tabs. **Tab** moves between controls. **Escape** closes the current editor, menu, or panel.
+- **j/k** or **↓/↑** move a highlight through the tasks, as in Omarchy's own panels, and **Enter** or **Space** opens the highlighted task's details. Switching tabs clears the highlight.
 - The panel opens on the tab you last used, also after the shell restarts. It starts on Today.
 - Middle-click the bar widget, or use **Display → Refresh**, to refresh immediately. Background sync runs every minute.
 - Open the panel or Quick Add from a key or a script with `omarchy-shell crmne.todoist`:
@@ -243,7 +244,7 @@ Implementation follows the [Todoist API v1 documentation](https://developer.todo
 
 `check-bar` runs the bar widget, the panel and the task details offscreen with an image tag in every synced field and a local server, and fails if any of them asks that server for an image. A deliberately unsafe Text in the test proves it would notice. It also runs the widget the way a replacement bar such as Station hosts it, with a shell that offers no service, and checks that a click still opens the panel.
 
-`check-drag` runs offscreen QML interaction tests using synthetic tasks and intercepted requests. It checks clicks, multi-selection, context menus, bulk actions, deletion confirmation, drops, scrolling, scroll-position retention, and cancellation, without accessing a Todoist account. Bulk service tests cover batching, partial failures, retries, recurring completion, and account changes.
+`check-drag` runs offscreen QML interaction tests using synthetic tasks and intercepted requests. It checks clicks, keyboard navigation, multi-selection, context menus, bulk actions, deletion confirmation, drops, scrolling, scroll-position retention, and cancellation, without accessing a Todoist account. Bulk service tests cover batching, partial failures, retries, recurring completion, and account changes.
 
 `check-composer` tests both entry points, keyboard autocomplete, typed and pasted
 metadata, chip changes, description boundaries, contextual defaults, title
