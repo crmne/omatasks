@@ -81,6 +81,17 @@ ShellRoot {
             measured.text = title.text;
             verify(Math.abs(title.implicitWidth - measured.advanceWidth) < 2, title.implicitWidth + " vs " + measured.advanceWidth);
         }
+        // The icon matches Omarchy's bar icons and sits level with the text.
+        function test_bar_icon_is_stock_size_and_centred() {
+            var icon = findChild(widget, "barIcon");
+            var label = findChild(widget, "barReadout");
+            verify(icon && label);
+            compare(icon.height, Commons.Style.bar.iconSize);
+            function middle(item) { return item.mapToItem(widget, 0, item.height / 2).y; }
+            // The grid lays out again once the count appears, so give it a frame.
+            tryVerify(function() { return Math.abs(middle(icon) - middle(label)) < 0.5; }, 1000,
+                "icon middle " + middle(icon) + " vs text middle " + middle(label));
+        }
         function test_panel_and_details_show_tags_as_text() {
             var row = findChild(taskList, "taskPointer_hostile");
             verify(row);

@@ -64,7 +64,11 @@ Panel {
             anchors.centerIn: parent
             columns: button.vertical ? 1 : 2
             spacing: Style.space(5)
-            Tasks.TodoistIcon { color: button.foreground; width: Style.space(14); height: width }
+            // Centred on the text beside it rather than hung from the top of
+            // its line box, and the size of Omarchy's other bar icons.
+            verticalItemAlignment: Grid.AlignVCenter
+            horizontalItemAlignment: Grid.AlignHCenter
+            Tasks.TodoistIcon { objectName: "barIcon"; color: button.foreground; width: Style.bar.iconSize; height: width }
             Row {
                 id: label
                 objectName: "barReadout"
